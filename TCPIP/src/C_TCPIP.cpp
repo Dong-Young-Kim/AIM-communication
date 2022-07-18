@@ -57,8 +57,10 @@ pair<int,int> handShake(){
     return make_pair(serv_sock, clnt_sock);
 }
 
-void recv_fusion(TCPIP::object_msg_arr fusion_arr){
-    
+void recv_fusion(const TCPIP::object_msg_arrConstPtr& fusn_arr){
+    for (const TCPIP::object_msg& fusn_obj : fusn_arr->object_msg_arr){
+        
+    }
 }
 
 void recv_gps(TCPIP::object_msg_arr gps_m){
@@ -74,6 +76,10 @@ void send(int clnt_sock){
         write(clnt_sock, &tmp[i], sizeof(float));
 }
 
+void recv(int clnt_sock){
+    float buf;
+    read(clnt_sock, &buf, sizeof(float));
+}
 
 
 int main(int argc, char* argv[]){
