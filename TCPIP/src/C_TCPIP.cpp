@@ -8,7 +8,8 @@
 float send_packet[SENDPACKETSIZE] = {11,12,13,314,4124,123,432,14,213,41234,124,1234,324,12,341,4,1234,1,234,1234,14,1,423};
 float recv_packet[RECVPACKETSIZE] = {11,12,13,314,4124,123,432,14,213,41234,124,1234,324,12,341,4,1234,1,234,1234,14,1,423};
 
-objInfo_struct objInfo_msg;
+vector<objInfo_struct> fusn_objInfo_msg;
+vector<objInfo_struct> lidar_objInfo_msg;
 gps_msg_struct gps_msg;
 ins_msg_struct ins_msg;
 
@@ -42,63 +43,89 @@ pair<int,int> handShake(){
     return make_pair(serv_sock, clnt_sock);
 }
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//communication with serial node
 void serial_msg_pub(){
-    erp42_msgs::ModeCmd     mode_msg;
-    erp42_msgs::DriveCmd    drive_msg;
+    erp42_msgs::ModeCmd::Ptr    mode_msg (new erp42_msgs::ModeCmd);
+    erp42_msgs::DriveCmd::Ptr   drive_msg(new erp42_msgs::DriveCmd);
 
-    //pub_mode.dkj = buf[1];
-    mode_msg.alive  = 1;
-    mode_msg.EStop  = 1;
-    mode_msg.Gear   = 1;
-    mode_msg.MorA   = 1;
+    mode_msg->alive  = (uint8_t)    1;
+    mode_msg->EStop  = (uint8_t)    0;
+    mode_msg->Gear   = (uint8_t)    1;
+    mode_msg->MorA   = (uint8_t)    1;
 
-    drive_msg.brake = 20;
-    drive_msg.Deg   = 0;
-    drive_msg.KPH   = 0;
+    drive_msg->brake = (uint8_t)    20;
+    drive_msg->Deg   = (int16_t)    0;
+    drive_msg->KPH   = (uint16_t)   0;
 
     pub2serial_mode.    publish(mode_msg);
     pub2serial_drive.   publish(drive_msg);
 }
 
 void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
-    cout << "feed MorA = "      << msg->MorA << endl;
-    cout << "feed EStop = "     << msg->EStop << endl;
-    cout << "feed Gear = "      << msg->Gear << endl;
-    cout << "feed speed = "     << msg->speed << endl;
-    cout << "feed brake = "     << msg->brake << endl;
-    cout << "feed steer = "     << msg->steer << endl;
-    cout << "feed encoder = "   << msg->encoder << endl;
+    cout << "feed MorA    = "   << (uint)   msg->MorA       << endl;
+    cout << "feed EStop   = "   << (uint)   msg->EStop      << endl;
+    cout << "feed Gear    = "   << (uint)   msg->Gear       << endl;
+    cout << "feed speed   = "   << (double) msg->speed      << endl;
+    cout << "feed brake   = "   << (double) msg->brake      << endl;
+    cout << "feed steer   = "   << (int)    msg->steer      << endl;
+    cout << "feed encoder = "   << (int)    msg->encoder    << endl;
     //msg to buffer code
 }
 
 void recv_cmd (const erp42_msgs::CmdControl::Ptr msg){
     serial_msg_pub();
-    cout << "cmd MorA = "       << msg->MorA << endl;
-    cout << "cmd EStop = "      << msg->EStop << endl;
-    cout << "cmd Gear = "       << msg->Gear << endl;
-    cout << "cmd KPH = "        << msg->KPH << endl;
-    cout << "cmd brake = "      << msg->brake << endl;
-    cout << "cmd Deg = "        << msg->Deg << endl;
+    cout << "cmd MorA   = "      << (uint)   msg->MorA  << endl;
+    cout << "cmd EStop  = "      << (uint)   msg->EStop << endl;
+    cout << "cmd Gear   = "      << (uint)   msg->Gear  << endl;
+    cout << "cmd KPH    = "      << (uint)   msg->KPH   << endl;
+    cout << "cmd brake  = "      << (uint)   msg->brake << endl;
+    cout << "cmd Deg    = "      << (int)    msg->Deg   << endl;
 }
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //recive data and save
+void recv_lidar(const TCPIP::object_msg_arrConstPtr& lidar_arr){
+    lidar_objInfo_msg.clear();
+    for (const TCPIP::object_msg& fusn_obj : lidar_arr->object_msg_arr){
+        objInfo_struct objInfoTmp;
+        objInfoTmp.classes = fusn_obj.classes;
+        objInfoTmp.idx     = fusn_obj.idx;
+        objInfoTmp.x       = fusn_obj.x;
+        objInfoTmp.y       = fusn_obj.y;
+        objInfoTmp.z       = fusn_obj.z;
+        objInfoTmp.xMin    = fusn_obj.xMin;
+        objInfoTmp.yMin    = fusn_obj.yMin;
+        objInfoTmp.zMin    = fusn_obj.zMin;
+        objInfoTmp.xMax    = fusn_obj.xMax;
+        objInfoTmp.yMax    = fusn_obj.yMax;
+        objInfoTmp.zMax    = fusn_obj.zMax;
+        
+        lidar_objInfo_msg.push_back(objInfoTmp);
+    }
+
+}
+
 void recv_fusion(const TCPIP::object_msg_arrConstPtr& fusn_arr){
+    fusn_objInfo_msg.clear();
     for (const TCPIP::object_msg& fusn_obj : fusn_arr->object_msg_arr){
-        objInfo_msg.classes = fusn_obj.classes;
-        objInfo_msg.idx     = fusn_obj.idx;
-        objInfo_msg.x       = fusn_obj.x;
-        objInfo_msg.y       = fusn_obj.y;
-        objInfo_msg.z       = fusn_obj.z;
-        objInfo_msg.xMin    = fusn_obj.xMin;
-        objInfo_msg.yMin    = fusn_obj.yMin;
-        objInfo_msg.zMin    = fusn_obj.zMin;
-        objInfo_msg.xMax    = fusn_obj.xMax;
-        objInfo_msg.yMax    = fusn_obj.yMax;
-        objInfo_msg.zMax    = fusn_obj.zMax;
+        objInfo_struct objInfoTmp;
+        objInfoTmp.classes = fusn_obj.classes;
+        objInfoTmp.idx     = fusn_obj.idx;
+        objInfoTmp.x       = fusn_obj.x;
+        objInfoTmp.y       = fusn_obj.y;
+        objInfoTmp.z       = fusn_obj.z;
+        objInfoTmp.xMin    = fusn_obj.xMin;
+        objInfoTmp.yMin    = fusn_obj.yMin;
+        objInfoTmp.zMin    = fusn_obj.zMin;
+        objInfoTmp.xMax    = fusn_obj.xMax;
+        objInfoTmp.yMax    = fusn_obj.yMax;
+        objInfoTmp.zMax    = fusn_obj.zMax;
+
+        fusn_objInfo_msg.push_back(objInfoTmp);
     }
 
 }
@@ -153,7 +180,7 @@ void recv(int clnt_sock){
 
 int main(int argc, char* argv[]){
 
-    pair<int, int> sock = handShake(); //first = server socket, second client socket
+    //pair<int, int> sock = handShake(); //first = server socket, second client socket
 
     ros::init(argc, argv, "TCPIP");             //node name 
 	ros::NodeHandle nh;                         //nodehandle
@@ -161,9 +188,13 @@ int main(int argc, char* argv[]){
     ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
     ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command", 1, recv_cmd);
 
+    ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object", 1, recv_lidar);
     ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj", 1, recv_fusion);
     ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",  1, recv_gps);
     ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",        1, recv_ins);
+
+    pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd>("/erp42_serial/mode", 1);
+    pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
 
     //only send
     // ros::Rate rate(20.);
@@ -176,8 +207,8 @@ int main(int argc, char* argv[]){
     //send and receive
     while (ros::ok()){
         ros::spinOnce();
-        send(sock.second);
-        recv(sock.second);
+        //send(sock.second);
+        //recv(sock.second);
     }
 
     return 0;

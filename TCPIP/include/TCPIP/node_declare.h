@@ -19,11 +19,12 @@
 #include <std_msgs/String.h>
 #include <sensor_msgs/NavSatFix.h>          //gps
 #include <std_msgs/Float32MultiArray.h>     //ins
-#include <erp42_msgs/CmdControl.h>
-#include <erp42_msgs/SerialFeedBack.h>
-#include <erp42_msgs/DriveCmd.h>
-#include <erp42_msgs/ModeCmd.h>
 #include <TCPIP/object_msg_arr.h>           //fusion
+#include <erp42_msgs/CmdControl.h>          //return value this node put in
+#include <erp42_msgs/SerialFeedBack.h>      //return erp42 current status
+#include <erp42_msgs/DriveCmd.h>            //send to serial node drive data
+#include <erp42_msgs/ModeCmd.h>             //send to serial node mode data
+
 
 using namespace std;
 
