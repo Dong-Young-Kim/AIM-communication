@@ -2,9 +2,11 @@
 
 #define SERV_ADDR "192.168.1.70"
 #define SERV_PORT 15234
-#define TOTALPACKETSIZE 50
+#define SENDPACKETSIZE 50
+#define RECVPACKETSIZE 50
 
-float final_packet[TOTALPACKETSIZE] = {11,12,13,314,4124,123,432,14,213,41234,124,1234,324,12,341,4,1234,1,234,1234,14,1,423};
+float send_packet[SENDPACKETSIZE] = {11,12,13,314,4124,123,432,14,213,41234,124,1234,324,12,341,4,1234,1,234,1234,14,1,423};
+float recv_packet[RECVPACKETSIZE] = {11,12,13,314,4124,123,432,14,213,41234,124,1234,324,12,341,4,1234,1,234,1234,14,1,423};
 
 objInfo_struct objInfo_msg;
 gps_msg_struct gps_msg;
@@ -39,6 +41,47 @@ pair<int,int> handShake(){
 
     return make_pair(serv_sock, clnt_sock);
 }
+
+
+void serial_msg_pub(){
+    erp42_msgs::ModeCmd     mode_msg;
+    erp42_msgs::DriveCmd    drive_msg;
+
+    //pub_mode.dkj = buf[1];
+    mode_msg.alive  = 1;
+    mode_msg.EStop  = 1;
+    mode_msg.Gear   = 1;
+    mode_msg.MorA   = 1;
+
+    drive_msg.brake = 20;
+    drive_msg.Deg   = 0;
+    drive_msg.KPH   = 0;
+
+    pub2serial_mode.    publish(mode_msg);
+    pub2serial_drive.   publish(drive_msg);
+}
+
+void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
+    cout << "feed MorA = "      << msg->MorA << endl;
+    cout << "feed EStop = "     << msg->EStop << endl;
+    cout << "feed Gear = "      << msg->Gear << endl;
+    cout << "feed speed = "     << msg->speed << endl;
+    cout << "feed brake = "     << msg->brake << endl;
+    cout << "feed steer = "     << msg->steer << endl;
+    cout << "feed encoder = "   << msg->encoder << endl;
+    //msg to buffer code
+}
+
+void recv_cmd (const erp42_msgs::CmdControl::Ptr msg){
+    serial_msg_pub();
+    cout << "cmd MorA = "       << msg->MorA << endl;
+    cout << "cmd EStop = "      << msg->EStop << endl;
+    cout << "cmd Gear = "       << msg->Gear << endl;
+    cout << "cmd KPH = "        << msg->KPH << endl;
+    cout << "cmd brake = "      << msg->brake << endl;
+    cout << "cmd Deg = "        << msg->Deg << endl;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,14 +139,15 @@ void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
 
 
 void send(int clnt_sock){
-    cout << final_packet[0] << endl;
-    for(int i = 0; i < TOTALPACKETSIZE; i++)
-        write(clnt_sock, &final_packet[i], sizeof(float));
+    cout << send_packet[0] << endl;
+    // for(int i = 0; i < SENDPACKETSIZE; i++)
+    //     write(clnt_sock, &send_packet[i], sizeof(float));
+    write(clnt_sock, send_packet, SENDPACKETSIZE * sizeof(float));
 }
 
 void recv(int clnt_sock){
-    float buf;
-    read(clnt_sock, &buf, sizeof(float));
+    read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(float));
+
 }
 
 
@@ -114,9 +158,12 @@ int main(int argc, char* argv[]){
     ros::init(argc, argv, "TCPIP");             //node name 
 	ros::NodeHandle nh;                         //nodehandle
 
-    ros::Subscriber sub_fusion  = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj", 1, recv_fusion);
-    ros::Subscriber sub_gps     = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",  1, recv_gps);
-    ros::Subscriber sub_ins     = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",        1, recv_ins);
+    ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
+    ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command", 1, recv_cmd);
+
+    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj", 1, recv_fusion);
+    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",  1, recv_gps);
+    ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",        1, recv_ins);
 
     //only send
     // ros::Rate rate(20.);

@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
    pcl_conversions
    pcl_ros
    std_msgs
+   erp42_msgs
    message_generation
 )
 

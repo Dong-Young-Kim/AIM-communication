@@ -19,7 +19,11 @@
 #include <std_msgs/String.h>
 #include <sensor_msgs/NavSatFix.h>          //gps
 #include <std_msgs/Float32MultiArray.h>     //ins
-#include "TCPIP/object_msg_arr.h"           //fusion
+#include <erp42_msgs/CmdControl.h>
+#include <erp42_msgs/SerialFeedBack.h>
+#include <erp42_msgs/DriveCmd.h>
+#include <erp42_msgs/ModeCmd.h>
+#include <TCPIP/object_msg_arr.h>           //fusion
 
 using namespace std;
 
@@ -70,3 +74,7 @@ struct ins_msg_struct {
     float enu_n         = 0;            //ins code start = origin
     float enu_u         = 0;            //ins code start = origin
 };
+
+//msg
+ros::Publisher pub2serial_mode;
+ros::Publisher pub2serial_drive;
