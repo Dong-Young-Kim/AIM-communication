@@ -28,6 +28,18 @@
 
 using namespace std;
 
+//platform
+struct platform_struct{
+    uint8_t    MorA    = 0;
+    uint8_t    EStop   = 0;
+    uint8_t    Gear    = 0;
+    double     speed   = 0;
+    double     steer   = 0;
+    int16_t    brake   = 0;
+    uint32_t   encoder = 0;
+    uint8_t    alive   = 0;
+};
+
 //object
 struct objInfo_struct {
     string classes      = "none";
@@ -42,6 +54,16 @@ struct objInfo_struct {
     float yMax          = 0;
     float zMax          = 0;
 };
+
+inline float objClass2float(string clas){
+    if (clas == "unknown") return 10;
+    else if ("car") return 21;
+    else return -1;
+}
+
+bool obj_comp(objInfo_struct a, objInfo_struct b){
+    return (a.x * a.x + a.y * a.y) < (b.x * b.x + b.y * b.y);
+}
 
 //gps
 struct gps_msg_struct{

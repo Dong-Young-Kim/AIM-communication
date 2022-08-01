@@ -17,12 +17,12 @@
 #include <std_msgs/String.h>
 
 #define SERV_TCP_PORT 15234
-#define SERV_ADDR "192.168.1.70"
+#define SERV_ADDR "192.168.1.17"
 
 int main(int argc, char* argv[]){
    int x,y;
    struct sockaddr_in serv_addr;
-   float buf[50];
+   float buf[200];
    printf("Hi, I am the client\n");
 
    bzero((char *)&serv_addr, sizeof(serv_addr));
@@ -46,12 +46,16 @@ int main(int argc, char* argv[]){
    printf("now i am connected to the server.\n");
 
    int i = 0;
-   for(;;){
-      y = read(x, &buf[i], sizeof(float));
+   y = read(x, buf, 200 * sizeof(float));
+   printf("%f\n", buf[198]);
+   printf("%f\n", buf[199]);
+   for(;;){      
       //buf[y]=0;
-      printf("from server: %f\n", buf[i]);
+      //printf("from server: %f\n", buf[i]);
+      //printf("%f\n", buf[198]);
+      printf("%f\n", buf[199]);
       i++;
-      i %= 50;
+      i %= 200;
    }
    close(x);  // disconect the communication
 }
