@@ -223,6 +223,7 @@ void send(int clnt_sock){
     send_packet[ 28] = ins_msg.gyro_z    ;
     send_packet[ 29] = ins_msg.quat_x    ;
     send_packet[ 30] = ins_msg.quat_y    ;
+    
     send_packet[ 31] = ins_msg.quat_z    ;
     send_packet[ 32] = ins_msg.quat_w    ;
     send_packet[ 33] = ins_msg.ned_n     ;
@@ -301,7 +302,7 @@ int main(int argc, char* argv[]){
     //send and receive
     while (ros::ok()){
         ros::spinOnce();
-        send_packet[199] = nh.ok();
+        //send_packet[199] = nh.ok();
         send(sock.second);
         send_packet[199] = 0;
         //recv(sock.second);
