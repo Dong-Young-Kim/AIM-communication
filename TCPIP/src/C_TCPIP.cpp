@@ -281,14 +281,14 @@ int main(int argc, char* argv[]){
 	ros::NodeHandle nh;                         //nodehandle
 
     ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
-    ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command", 1, recv_cmd);
+    ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command",  1, recv_cmd);
 
-    ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object", 1, recv_lidar);
-    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj", 1, recv_fusion);
-    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",  1, recv_gps);
-    ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",        1, recv_ins);
+    ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object",   1, recv_lidar);
+    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj",     1, recv_fusion);
+    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",      1, recv_gps);
+    ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",            1, recv_ins);
 
-    pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd>("/erp42_serial/mode", 1);
+    pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
 
     //only send
