@@ -2,16 +2,19 @@
 
 #define SERV_ADDR "192.168.1.17"
 #define SERV_PORT 15234
-#define SENDPACKETSIZE 200 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
+#define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
+#define TRIALSENDPACKETSIZE 100
 #define RECVPACKETSIZE 50
 
-float send_packet[SENDPACKETSIZE] = {0};
+double final_send_packet[FINALSENDPACKETSIZE] = {0};
+double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
 float recv_packet[RECVPACKETSIZE] = {0};
 
 //buffer
 platform_struct platform_msg;
 vector<objInfo_struct> fusn_objInfo_msg;
 vector<objInfo_struct> lidar_objInfo_msg;
+tff_sign tffsign_msg;
 gps_msg_struct gps_msg;
 ins_msg_struct ins_msg;
 
@@ -90,7 +93,7 @@ void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
     platform_msg.steer     =  (double)   msg->steer  ;
     platform_msg.brake     =  (int16_t)  msg->brake  ;
     platform_msg.encoder   =  (uint32_t) msg->encoder;
-    platform_msg.alive     =  (uint8_t)  msg->encoder;
+    platform_msg.alive     =  (uint8_t)  msg->alive  ;
 }
 
 void recv_cmd (const erp42_msgs::CmdControl::Ptr msg){
@@ -150,11 +153,15 @@ void recv_fusion(const TCPIP::object_msg_arrConstPtr& fusn_arr){
     sort(fusn_objInfo_msg.begin(), fusn_objInfo_msg.end(), obj_comp);
 }
 
+void recv_camera(const std_msgs::String){
+    //need tffSign filter sorted fixel area
+    //so tffSign have to be handed fusion code
+}
+
 void recv_gps(const sensor_msgs::NavSatFixConstPtr& gps_m){
     gps_msg.gps_lat = gps_m->latitude;
     gps_msg.gps_lon = gps_m->longitude;
     gps_msg.gps_alt = gps_m->altitude;
-    
 }
 
 void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
@@ -184,92 +191,101 @@ void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-void send(int clnt_sock){
-
+void trial_send(int clnt_sock){
     //0 ~ 7 : erp42's current state
-    send_packet[  0] = (float) platform_msg.MorA    ;
-    send_packet[  1] = (float) platform_msg.EStop   ;
-    send_packet[  2] = (float) platform_msg.Gear    ;
-    send_packet[  3] = (float) platform_msg.speed   ;
-    send_packet[  4] = (float) platform_msg.steer   ;
-    send_packet[  5] = (float) platform_msg.brake   ;
-    send_packet[  6] = (float) platform_msg.encoder ;
-    send_packet[  7] = (float) platform_msg.alive   ;
-    send_packet[  8] ;
-    send_packet[  9] ;
+    final_send_packet[  0] = (double) platform_msg.MorA    ;
+    final_send_packet[  1] = (double) platform_msg.EStop   ;
+    final_send_packet[  2] = (double) platform_msg.speed   ;
+    final_send_packet[  3] = (double) platform_msg.steer   ;
+    final_send_packet[  4] = (double) platform_msg.brake   ;
+    final_send_packet[  5] ;
+    final_send_packet[  6] ;
 
-    //10 ~ 12 : gps data
-    send_packet[ 10] = (float) gps_msg.gps_lat;
-    send_packet[ 11] = (float) gps_msg.gps_lon;
-    send_packet[ 12] = (float) gps_msg.gps_alt;
-    send_packet[ 13] ;
-    send_packet[ 14] ;
-    send_packet[ 15] ;
-    send_packet[ 16] ;
-    send_packet[ 17] ;
-    send_packet[ 18] ;
-    send_packet[ 19] ;
+    //7 ~ 9 : gps data
+    final_send_packet[  7] = gps_msg.gps_lat;
+    final_send_packet[  8] = gps_msg.gps_lon;
+    final_send_packet[  9] = gps_msg.gps_alt;
 
-    //20 ~ 38 : ins data
-    send_packet[ 20] = ins_msg.kalman_lat;
-    send_packet[ 21] = ins_msg.kalman_lon;
-    send_packet[ 22] = ins_msg.kalman_alt;
-    send_packet[ 23] = ins_msg.accel_x   ;
-    send_packet[ 24] = ins_msg.accel_y   ;
-    send_packet[ 25] = ins_msg.accel_z   ;
-    send_packet[ 26] = ins_msg.gyro_x    ;
-    send_packet[ 27] = ins_msg.gyro_y    ;
-    send_packet[ 28] = ins_msg.gyro_z    ;
-    send_packet[ 29] = ins_msg.quat_x    ;
-    send_packet[ 30] = ins_msg.quat_y    ;
-    
-    send_packet[ 31] = ins_msg.quat_z    ;
-    send_packet[ 32] = ins_msg.quat_w    ;
-    send_packet[ 33] = ins_msg.ned_n     ;
-    send_packet[ 34] = ins_msg.ned_e     ;
-    send_packet[ 35] = ins_msg.ned_d     ;
-    send_packet[ 36] = ins_msg.enu_e     ;
-    send_packet[ 37] = ins_msg.enu_n     ;
-    send_packet[ 38] = ins_msg.enu_u     ;
-    send_packet[ 39] ;
-
-    //temp
-    send_packet[ 40] ;
-    send_packet[ 41] ;
-    send_packet[ 42] ;
-    send_packet[ 43] ;
-    send_packet[ 44] ;
-    send_packet[ 45] ;
-    send_packet[ 46] ;
-    send_packet[ 47] ;
-    send_packet[ 48] ;
-    send_packet[ 49] ;
+    //10 ~ 19 : ins data
+    final_send_packet[ 10] = (double)ins_msg.kalman_lat;
+    final_send_packet[ 11] = (double)ins_msg.kalman_lon;
+    final_send_packet[ 12] = (double)ins_msg.kalman_alt;
+    final_send_packet[ 13] ;
+    final_send_packet[ 14] ;
+    final_send_packet[ 15] = (double)ins_msg.enu_e     ;
+    final_send_packet[ 16] = (double)ins_msg.enu_n     ;
+    final_send_packet[ 17] = (double)ins_msg.enu_u     ;
+    final_send_packet[ 18] ;
+    final_send_packet[ 19] ;
 
     //object
-    int packetI = 50;
+    int packetI = 20;
     for (objInfo_struct obj : fusn_objInfo_msg){
-        send_packet[packetI++] = (float)obj.idx;                                //0 : index or ctc
-        send_packet[packetI++] = objClass2float(obj.classes);                   //1 : classes
-        send_packet[packetI++] = (float)sqrt(obj.x * obj.x + obj.y * obj.y);    //2 : distance
-        send_packet[packetI++] = obj.x;                                         //3 : x center
-        send_packet[packetI++] = obj.y;                                         //4 : y center
-        send_packet[packetI++] = obj.z;                                         //5 : z center
-        send_packet[packetI++] = obj.xMin;                                      //6 : x minimum
-        send_packet[packetI++] = obj.xMax;                                      //7 : x maximum
-        send_packet[packetI++] = obj.yMin;                                      //8 : y minimum
-        send_packet[packetI++] = obj.yMax;                                      //9 : y maximun
-        if(packetI >= SENDPACKETSIZE) break;
+        final_send_packet[packetI++] = (float)obj.idx;                                //0 : index or ctc
+        final_send_packet[packetI++] = objClass2float(obj.classes);                   //1 : classes
+        final_send_packet[packetI++] = obj.x;                                         //3 : x center
+        final_send_packet[packetI++] = obj.y;                                         //4 : y center
+        if(packetI >= TRIALSENDPACKETSIZE) break;
     }
 
     // for(int i = 0; i < SENDPACKETSIZE; i++)
     //     write(clnt_sock, &send_packet[i], sizeof(float));
-    write(clnt_sock, send_packet, SENDPACKETSIZE * sizeof(float));
+    write(clnt_sock, trial_send_packet, TRIALSENDPACKETSIZE * sizeof(double));
+}
+
+void final_send(int clnt_sock){
+
+    //0 ~ 7 : erp42's current state
+    final_send_packet[  0] = (float) platform_msg.MorA ;
+    final_send_packet[  1] = (float) platform_msg.EStop;
+    final_send_packet[  2] = (float) platform_msg.speed;
+    final_send_packet[  3] = (float) platform_msg.steer;
+    final_send_packet[  4] = (float) platform_msg.brake;
+    final_send_packet[  5] ;
+    final_send_packet[  6] ;
+
+    //7 ~ 9 : gps data
+    final_send_packet[  7] = (float) gps_msg.gps_lat;
+    final_send_packet[  8] = (float) gps_msg.gps_lon;
+    final_send_packet[  9] = (float) gps_msg.gps_alt;
+
+    //10 ~ 19 : ins data
+    final_send_packet[ 10] = ins_msg.kalman_lat;
+    final_send_packet[ 11] = ins_msg.kalman_lon;
+    final_send_packet[ 12] = ins_msg.kalman_alt;
+    final_send_packet[ 13] ;
+    final_send_packet[ 14] ;
+    final_send_packet[ 15] = ins_msg.enu_e;
+    final_send_packet[ 16] = ins_msg.enu_n;
+    final_send_packet[ 17] = ins_msg.enu_u;
+    final_send_packet[ 18] ;
+    final_send_packet[ 19] = tffsign_msg.signal_num;
+
+    //object
+    int packetI = 20;
+    for (objInfo_struct obj : fusn_objInfo_msg){
+        final_send_packet[packetI++] = (float)obj.idx;                                //0 : index or ctc
+        final_send_packet[packetI++] = objClass2float(obj.classes);                   //1 : classes
+        final_send_packet[packetI++] = (float)sqrt(obj.x * obj.x + obj.y * obj.y);    //2 : distance
+        final_send_packet[packetI++] = obj.x;                                         //3 : x center
+        final_send_packet[packetI++] = obj.y;                                         //4 : y center
+        final_send_packet[packetI++] = obj.z;                                         //5 : z center
+        final_send_packet[packetI++] = obj.xMin;                                      //6 : x minimum
+        final_send_packet[packetI++] = obj.xMax;                                      //7 : x maximum
+        final_send_packet[packetI++] = obj.yMin;                                      //8 : y minimum
+        final_send_packet[packetI++] = obj.yMax;                                      //9 : y maximun
+        if(packetI >= FINALSENDPACKETSIZE) break;
+    }
+
+        final_send_packet[0] = 990;
+    
+    // for(int i = 0; i < SENDPACKETSIZE; i++)
+    //     write(clnt_sock, &send_packet[i], sizeof(float));
+    write(clnt_sock, final_send_packet, FINALSENDPACKETSIZE * sizeof(double));
 }
 
 void recv(int clnt_sock){
-    read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(float));
-
+    read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double));
 }
 
 
@@ -283,10 +299,11 @@ int main(int argc, char* argv[]){
     ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
     ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command",  1, recv_cmd);
 
-    ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object",   1, recv_lidar);
-    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj",     1, recv_fusion);
-    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",      1, recv_gps);
-    ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",            1, recv_ins);
+    ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object",                   1, recv_lidar);
+    ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>            ("/data_sender/Filtered_classes",   1, recv_camera);
+    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj",                     1, recv_fusion);
+    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",                      1, recv_gps);
+    ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",                            1, recv_ins);
 
     pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
@@ -303,9 +320,10 @@ int main(int argc, char* argv[]){
     while (ros::ok()){
         ros::spinOnce();
         //send_packet[199] = nh.ok();
-        send(sock.second);
-        send_packet[199] = 0;
-        //recv(sock.second);
+        final_send(sock.second);
+        //trial_send(sock.second);
+
+        recv(sock.second);
     }
 
     close(sock.first);
