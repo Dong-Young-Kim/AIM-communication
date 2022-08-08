@@ -2,9 +2,9 @@
 
 #define SERV_ADDR "192.168.1.17"
 #define SERV_PORT 15234
-#define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
-#define TRIALSENDPACKETSIZE 100
-#define RECVPACKETSIZE 50
+#define FINALSENDPACKETSIZE 70      //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 20) / 10
+#define TRIALSENDPACKETSIZE 100     //!!always set to multiples of  4!!  :  maximum sending object size ("SENDPACKETSIZE" - 20) /  4
+#define RECVPACKETSIZE      20
 
 double final_send_packet[FINALSENDPACKETSIZE] = {0};
 double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
@@ -17,6 +17,14 @@ vector<objInfo_struct> lidar_objInfo_msg;
 tff_sign tffsign_msg;
 gps_msg_struct gps_msg;
 ins_msg_struct ins_msg;
+
+CK::checkProcess ck_erp_feedback    ("ERP_FB",  1);
+CK::checkProcess ck_lidar           ("LiDAR",   1);
+CK::checkProcess ck_camera          ("Camera",  1);
+CK::checkProcess ck_fusion          ("Fusion",  1);
+CK::checkProcess ck_gps             ("GPS",     1);
+CK::checkProcess ck_ins             ("INS",     1);
+CK::checkProcess ck_control         ("Control", 1);
 
 
 pair<int,int> handShake(){
@@ -50,6 +58,7 @@ pair<int,int> handShake(){
         int ch;
         ch = fork();
         if (ch == 0){
+            cout << "befor hs" << endl;
             return make_pair(serv_sock, clnt_sock);
         }
         close(clnt_sock);
@@ -78,6 +87,7 @@ void serial_msg_pub(){
 }
 
 void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
+    ck_erp_feedback.Update();
     cout << "feed MorA    = "   << (uint)   msg->MorA       << endl;
     cout << "feed EStop   = "   << (uint)   msg->EStop      << endl;
     cout << "feed Gear    = "   << (uint)   msg->Gear       << endl;
@@ -112,11 +122,12 @@ void recv_cmd (const erp42_msgs::CmdControl::Ptr msg){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //recive data and save
 void recv_lidar(const TCPIP::object_msg_arrConstPtr& lidar_arr){
+    ck_lidar.Update();
     lidar_objInfo_msg.clear();
     for (const TCPIP::object_msg& fusn_obj : lidar_arr->object_msg_arr){
         objInfo_struct objInfoTmp;
         objInfoTmp.classes = fusn_obj.classes;
-        objInfoTmp.idx     = fusn_obj.idx;
+        objInfoTmp.idx     = fusn_obj.idx + 1;          //prevent 0 when send tcpip
         objInfoTmp.x       = fusn_obj.x;
         objInfoTmp.y       = fusn_obj.y;
         objInfoTmp.z       = fusn_obj.z;
@@ -133,11 +144,12 @@ void recv_lidar(const TCPIP::object_msg_arrConstPtr& lidar_arr){
 }
 
 void recv_fusion(const TCPIP::object_msg_arrConstPtr& fusn_arr){
+    ck_fusion.Update();
     fusn_objInfo_msg.clear();
     for (const TCPIP::object_msg& fusn_obj : fusn_arr->object_msg_arr){
         objInfo_struct objInfoTmp;
         objInfoTmp.classes = fusn_obj.classes;
-        objInfoTmp.idx     = fusn_obj.idx;
+        objInfoTmp.idx     = fusn_obj.idx + 1;          //prevent 0 when send tcpip
         objInfoTmp.x       = fusn_obj.x;
         objInfoTmp.y       = fusn_obj.y;
         objInfoTmp.z       = fusn_obj.z;
@@ -154,17 +166,20 @@ void recv_fusion(const TCPIP::object_msg_arrConstPtr& fusn_arr){
 }
 
 void recv_camera(const std_msgs::String){
+    ck_camera.Update();
     //need tffSign filter sorted fixel area
     //so tffSign have to be handed fusion code
 }
 
 void recv_gps(const sensor_msgs::NavSatFixConstPtr& gps_m){
+    ck_gps.Update();
     gps_msg.gps_lat = gps_m->latitude;
     gps_msg.gps_lon = gps_m->longitude;
     gps_msg.gps_alt = gps_m->altitude;
 }
 
 void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
+    ck_ins.Update();
     ins_msg.kalman_lat   = ins_m->data.at( 0);
     ins_msg.kalman_lon   = ins_m->data.at( 1);
     ins_msg.kalman_alt   = ins_m->data.at( 2);
@@ -266,7 +281,7 @@ void final_send(int clnt_sock){
 
     //object
     int packetI = 20;
-    for (objInfo_struct obj : fusn_objInfo_msg){
+    for (objInfo_struct obj : lidar_objInfo_msg){
         final_send_packet[packetI++] = (double)obj.idx;                               //0 : index or ctc
         final_send_packet[packetI++] = objClass2double(obj.classes);                  //1 : classes
         final_send_packet[packetI++] = (double)sqrt(obj.x * obj.x + obj.y * obj.y);   //2 : distance
@@ -280,14 +295,37 @@ void final_send(int clnt_sock){
         if(packetI >= FINALSENDPACKETSIZE) break;
     }
 
+    cout << "sending data...\n";
+    for(int r = 0; r < 10; r++){
+        for (int c = 0; c < 7; c++){
+            printf("%.2f  ", final_send_packet[r + c * 10]);
+        }
+        printf("\n");
+    }
     write(clnt_sock, final_send_packet, FINALSENDPACKETSIZE * sizeof(double));
 }
 
 void recv(int clnt_sock){
-    read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double));
+    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) ck_control.Update();
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void checkAll(){
+    printf("==================================================================\n");
+    ck_erp_feedback.check();
+    ck_lidar       .check();
+    ck_camera      .check();
+    ck_fusion      .check();
+    ck_gps         .check();
+    ck_ins         .check();
+    printf("::  ");
+    if(!ck_control .check()){
+        printf("\n");
+        exit(0);
+    }
+    printf("\n");
+}
 
 int main(int argc, char* argv[]){
 
@@ -296,8 +334,8 @@ int main(int argc, char* argv[]){
     ros::init(argc, argv, "TCPIP");             //node name 
 	ros::NodeHandle nh;                         //nodehandle
 
-    ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
-    ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command",  1, recv_cmd);
+    ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback",     1, recv_feedback);
+    ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command",      1, recv_cmd);
 
     ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object",                   1, recv_lidar);
     ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>            ("/data_sender/Filtered_classes",   1, recv_camera);
@@ -308,25 +346,27 @@ int main(int argc, char* argv[]){
     pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
 
-    //only send
-    // ros::Rate rate(20.);
-    // while (ros::ok()){
-    //     ros::spinOnce();
-    //     rate.sleep();
-    //     send(sock.second);
-    // }
-
-    //send and receive
+    ck_control.Update(); //to prevent exit(0) exactly
+    ros::Rate rate(20.);
     while (ros::ok()){
         ros::spinOnce();
-        //send_packet[199] = nh.ok();
+        rate.sleep();
         final_send(sock.second);
         //trial_send(sock.second);
-
         recv(sock.second);
+        checkAll();
     }
 
-    close(sock.first);
-    close(sock.second);
+    // //send and receive
+    // while (ros::ok()){
+    //     ros::spinOnce();
+    //     //send_packet[199] = nh.ok();
+    //     final_send(sock.second);
+    //     //trial_send(sock.second);
+
+    //     recv(sock.second);
+    // }
+
+
     return 0;
 }
