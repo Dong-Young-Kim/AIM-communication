@@ -17,6 +17,8 @@
 #include <ros/ros.h>
 #include <boost/format.hpp>
 #include <std_msgs/String.h>
+
+//MSG include 
 #include <sensor_msgs/NavSatFix.h>          //gps
 #include <std_msgs/Float32MultiArray.h>     //ins
 #include <TCPIP/object_msg_arr.h>           //fusion
@@ -57,7 +59,7 @@ struct objInfo_struct {
 
 //traffic sign
 struct tff_sign{
-    int signal_num      = 0;
+    double signal_num      = 0;
     //bool R              = 0;  //1
     //bool O              = 0;  //2
     //bool G              = 0;  //3
@@ -65,7 +67,7 @@ struct tff_sign{
     //bool LG             = 0;  //5
 };
 
-inline float objClass2float(string clas){
+inline double objClass2double(string clas){
     if (clas == "unknown") return 10;
     else if ("car") return 21;
     else return -1;
@@ -90,6 +92,9 @@ struct ins_msg_struct {
     float ins_lat       = 0;          //slow dont use
     float ins_lon       = 0;          //slow dont use
     float ins_alt       = 0;          //slow dont use
+    float kalman_roll   = 0;
+    float kalman_pitch  = 0;
+    float kalman_yaw    = 0;
     float accel_x       = 0;          //body frame
     float accel_y       = 0;          //body frame
     float accel_z       = 0;          //body frame

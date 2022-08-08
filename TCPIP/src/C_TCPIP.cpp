@@ -8,7 +8,7 @@
 
 double final_send_packet[FINALSENDPACKETSIZE] = {0};
 double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
-float recv_packet[RECVPACKETSIZE] = {0};
+double recv_packet[RECVPACKETSIZE] = {0};
 
 //buffer
 platform_struct platform_msg;
@@ -165,28 +165,31 @@ void recv_gps(const sensor_msgs::NavSatFixConstPtr& gps_m){
 }
 
 void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
-    ins_msg.kalman_lat = ins_m->data.at( 0);
-    ins_msg.kalman_lon = ins_m->data.at( 1);
-    ins_msg.kalman_alt = ins_m->data.at( 2);
-    ins_msg.ins_lat    = ins_m->data.at( 3);          //slow, dont use
-    ins_msg.ins_lon    = ins_m->data.at( 4);          //slow, dont use
-    ins_msg.ins_alt    = ins_m->data.at( 5);          //slow, dont use
-    ins_msg.accel_x    = ins_m->data.at( 6);          //body frame
-    ins_msg.accel_y    = ins_m->data.at( 7);          //body frame
-    ins_msg.accel_z    = ins_m->data.at( 8);          //body frame
-    ins_msg.gyro_x     = ins_m->data.at( 9);
-    ins_msg.gyro_y     = ins_m->data.at(10);
-    ins_msg.gyro_z     = ins_m->data.at(11);
-    ins_msg.quat_x     = ins_m->data.at(12);
-    ins_msg.quat_y     = ins_m->data.at(13);
-    ins_msg.quat_z     = ins_m->data.at(14);
-    ins_msg.quat_w     = ins_m->data.at(15);
-    ins_msg.ned_n      = ins_m->data.at(16);            //ins code start = origin
-    ins_msg.ned_e      = ins_m->data.at(17);            //ins code start = origin
-    ins_msg.ned_d      = ins_m->data.at(18);            //ins code start = origin
-    ins_msg.enu_e      = ins_m->data.at(19);            //ins code start = origin
-    ins_msg.enu_n      = ins_m->data.at(20);            //ins code start = origin
-    ins_msg.enu_u      = ins_m->data.at(21);            //ins code start = origin
+    ins_msg.kalman_lat   = ins_m->data.at( 0);
+    ins_msg.kalman_lon   = ins_m->data.at( 1);
+    ins_msg.kalman_alt   = ins_m->data.at( 2);
+    ins_msg.ins_lat      = ins_m->data.at( 3);          //slow, dont use
+    ins_msg.ins_lon      = ins_m->data.at( 4);          //slow, dont use
+    ins_msg.ins_alt      = ins_m->data.at( 5);          //slow, dont use
+    ins_msg.kalman_roll  = ins_m->data.at( 6);
+    ins_msg.kalman_pitch = ins_m->data.at( 7);
+    ins_msg.kalman_yaw   = ins_m->data.at( 8);
+    ins_msg.accel_x      = ins_m->data.at( 9);          //body frame
+    ins_msg.accel_y      = ins_m->data.at(10);          //body frame
+    ins_msg.accel_z      = ins_m->data.at(11);          //body frame
+    ins_msg.gyro_x       = ins_m->data.at(12);
+    ins_msg.gyro_y       = ins_m->data.at(13);
+    ins_msg.gyro_z       = ins_m->data.at(14);
+    ins_msg.quat_x       = ins_m->data.at(15);
+    ins_msg.quat_y       = ins_m->data.at(16);
+    ins_msg.quat_z       = ins_m->data.at(17);
+    ins_msg.quat_w       = ins_m->data.at(18);
+    ins_msg.ned_n        = ins_m->data.at(19);            //ins code start = origin
+    ins_msg.ned_e        = ins_m->data.at(20);            //ins code start = origin
+    ins_msg.ned_d        = ins_m->data.at(21);            //ins code start = origin
+    ins_msg.enu_e        = ins_m->data.at(22);            //ins code start = origin
+    ins_msg.enu_n        = ins_m->data.at(23);            //ins code start = origin
+    ins_msg.enu_u        = ins_m->data.at(24);            //ins code start = origin
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -210,7 +213,7 @@ void trial_send(int clnt_sock){
     final_send_packet[ 10] = (double)ins_msg.kalman_lat;
     final_send_packet[ 11] = (double)ins_msg.kalman_lon;
     final_send_packet[ 12] = (double)ins_msg.kalman_alt;
-    final_send_packet[ 13] ;
+    final_send_packet[ 13] = (double)ins_msg.kalman_yaw;
     final_send_packet[ 14] ;
     final_send_packet[ 15] = (double)ins_msg.enu_e     ;
     final_send_packet[ 16] = (double)ins_msg.enu_n     ;
@@ -221,66 +224,60 @@ void trial_send(int clnt_sock){
     //object
     int packetI = 20;
     for (objInfo_struct obj : fusn_objInfo_msg){
-        final_send_packet[packetI++] = (float)obj.idx;                                //0 : index or ctc
-        final_send_packet[packetI++] = objClass2float(obj.classes);                   //1 : classes
-        final_send_packet[packetI++] = obj.x;                                         //3 : x center
-        final_send_packet[packetI++] = obj.y;                                         //4 : y center
+        final_send_packet[packetI++] = (double)obj.idx;                                //0 : index or ctc
+        final_send_packet[packetI++] = objClass2double(obj.classes);                   //1 : classes
+        final_send_packet[packetI++] = (double)obj.x;                                  //3 : x center
+        final_send_packet[packetI++] = (double)obj.y;                                  //4 : y center
         if(packetI >= TRIALSENDPACKETSIZE) break;
     }
 
-    // for(int i = 0; i < SENDPACKETSIZE; i++)
-    //     write(clnt_sock, &send_packet[i], sizeof(float));
     write(clnt_sock, trial_send_packet, TRIALSENDPACKETSIZE * sizeof(double));
 }
 
 void final_send(int clnt_sock){
 
     //0 ~ 7 : erp42's current state
-    final_send_packet[  0] = (float) platform_msg.MorA ;
-    final_send_packet[  1] = (float) platform_msg.EStop;
-    final_send_packet[  2] = (float) platform_msg.speed;
-    final_send_packet[  3] = (float) platform_msg.steer;
-    final_send_packet[  4] = (float) platform_msg.brake;
+    final_send_packet[  0] = (double) platform_msg.MorA ;
+    final_send_packet[  1] = (double) platform_msg.EStop;
+    final_send_packet[  2] = (double) platform_msg.speed;
+    final_send_packet[  3] = (double) platform_msg.steer;
+    final_send_packet[  4] = (double) platform_msg.brake;
     final_send_packet[  5] ;
     final_send_packet[  6] ;
 
     //7 ~ 9 : gps data
-    final_send_packet[  7] = (float) gps_msg.gps_lat;
-    final_send_packet[  8] = (float) gps_msg.gps_lon;
-    final_send_packet[  9] = (float) gps_msg.gps_alt;
+    final_send_packet[  7] = (double) gps_msg.gps_lat;
+    final_send_packet[  8] = (double) gps_msg.gps_lon;
+    final_send_packet[  9] = (double) gps_msg.gps_alt;
 
     //10 ~ 19 : ins data
-    final_send_packet[ 10] = ins_msg.kalman_lat;
-    final_send_packet[ 11] = ins_msg.kalman_lon;
-    final_send_packet[ 12] = ins_msg.kalman_alt;
-    final_send_packet[ 13] ;
+    final_send_packet[ 10] = (double) ins_msg.kalman_lat;
+    final_send_packet[ 11] = (double) ins_msg.kalman_lon;
+    final_send_packet[ 12] = (double) ins_msg.kalman_alt;
+    final_send_packet[ 13] = (double) ins_msg.kalman_yaw;
     final_send_packet[ 14] ;
-    final_send_packet[ 15] = ins_msg.enu_e;
-    final_send_packet[ 16] = ins_msg.enu_n;
-    final_send_packet[ 17] = ins_msg.enu_u;
+    final_send_packet[ 15] = (double) ins_msg.enu_e;
+    final_send_packet[ 16] = (double) ins_msg.enu_n;
+    final_send_packet[ 17] = (double) ins_msg.enu_u;
     final_send_packet[ 18] ;
-    final_send_packet[ 19] = tffsign_msg.signal_num;
+    final_send_packet[ 19] = (double) tffsign_msg.signal_num;
 
     //object
     int packetI = 20;
     for (objInfo_struct obj : fusn_objInfo_msg){
-        final_send_packet[packetI++] = (float)obj.idx;                                //0 : index or ctc
-        final_send_packet[packetI++] = objClass2float(obj.classes);                   //1 : classes
-        final_send_packet[packetI++] = (float)sqrt(obj.x * obj.x + obj.y * obj.y);    //2 : distance
-        final_send_packet[packetI++] = obj.x;                                         //3 : x center
-        final_send_packet[packetI++] = obj.y;                                         //4 : y center
-        final_send_packet[packetI++] = obj.z;                                         //5 : z center
-        final_send_packet[packetI++] = obj.xMin;                                      //6 : x minimum
-        final_send_packet[packetI++] = obj.xMax;                                      //7 : x maximum
-        final_send_packet[packetI++] = obj.yMin;                                      //8 : y minimum
-        final_send_packet[packetI++] = obj.yMax;                                      //9 : y maximun
+        final_send_packet[packetI++] = (double)obj.idx;                               //0 : index or ctc
+        final_send_packet[packetI++] = objClass2double(obj.classes);                  //1 : classes
+        final_send_packet[packetI++] = (double)sqrt(obj.x * obj.x + obj.y * obj.y);   //2 : distance
+        final_send_packet[packetI++] = (double)obj.x;                                 //3 : x center
+        final_send_packet[packetI++] = (double)obj.y;                                 //4 : y center
+        final_send_packet[packetI++] = (double)obj.z;                                 //5 : z center
+        final_send_packet[packetI++] = (double)obj.xMin;                              //6 : x minimum
+        final_send_packet[packetI++] = (double)obj.xMax;                              //7 : x maximum
+        final_send_packet[packetI++] = (double)obj.yMin;                              //8 : y minimum
+        final_send_packet[packetI++] = (double)obj.yMax;                              //9 : y maximun
         if(packetI >= FINALSENDPACKETSIZE) break;
     }
 
-        final_send_packet[0] = 990;
-    
-    // for(int i = 0; i < SENDPACKETSIZE; i++)
-    //     write(clnt_sock, &send_packet[i], sizeof(float));
     write(clnt_sock, final_send_packet, FINALSENDPACKETSIZE * sizeof(double));
 }
 
