@@ -17,6 +17,7 @@
 #include <ros/ros.h>
 #include <boost/format.hpp>
 #include <std_msgs/String.h>
+#include <chrono>
 
 //MSG include 
 #include <sensor_msgs/NavSatFix.h>          //gps
@@ -116,3 +117,36 @@ struct ins_msg_struct {
 //msg
 ros::Publisher pub2serial_mode;
 ros::Publisher pub2serial_drive;
+
+namespace CK{
+class checkProcess{
+public:
+    checkProcess(std::string processName_, float waitTime_)
+    :processName(processName_), waitTime(waitTime_){
+        prevClock = std::chrono::system_clock::now();
+    }
+    void Update(){
+        std::chrono::system_clock::time_point prevClock = std::chrono::system_clock::now();
+    }
+    bool check(){
+        bool alive = nodeAlive();
+        printNodeAlive(alive);
+        return alive;
+    }
+
+private:
+    bool nodeAlive(){
+        std::chrono::system_clock::time_point curClock = std::chrono::system_clock::now();
+        auto sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - prevClock);
+        return (sec.count() < waitTime);
+    }
+    void printNodeAlive(bool alive){
+        alive ? printf("\033[1;42m") : printf("\033[1;41m");
+        printf("%s", processName);
+        printf("\033[0m  ");
+    }
+    float waitTime;
+    std::chrono::system_clock::time_point prevClock;
+    std::string processName;
+};
+}
