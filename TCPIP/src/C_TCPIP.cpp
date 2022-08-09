@@ -1,14 +1,16 @@
 #include <TCPIP/node_declare.h>
 
-#define SERV_ADDR "192.168.1.17"
+#define SERV_ADDR "192.168.1.77"
 #define SERV_PORT 15234
-#define FINALSENDPACKETSIZE 70      //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 20) / 10
-#define TRIALSENDPACKETSIZE 100     //!!always set to multiples of  4!!  :  maximum sending object size ("SENDPACKETSIZE" - 20) /  4
-#define RECVPACKETSIZE      20
+#define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
+#define TRIALSENDPACKETSIZE 100
+#define RECVPACKETSIZE      6
 
 double final_send_packet[FINALSENDPACKETSIZE] = {0};
 double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
 double recv_packet[RECVPACKETSIZE] = {0};
+long long cnt_tmp = 0;
+
 
 //buffer
 platform_struct platform_msg;
@@ -49,7 +51,7 @@ pair<int,int> handShake(){
     if(listen(serv_sock, 5) == -1) printf("listen error");
     clnt_adr_sz = sizeof(clnt_adr);
 
-    int T = 100;
+    int T = 1000;
     while(T--){
         clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr, &clnt_adr_sz);
         if(clnt_sock == -1) printf("accept error\n");
@@ -213,41 +215,51 @@ void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
 //tcpip send and recive
 void trial_send(int clnt_sock){
     //0 ~ 7 : erp42's current state
-    final_send_packet[  0] = (double) platform_msg.MorA    ;
-    final_send_packet[  1] = (double) platform_msg.EStop   ;
-    final_send_packet[  2] = (double) platform_msg.speed   ;
-    final_send_packet[  3] = (double) platform_msg.steer   ;
-    final_send_packet[  4] = (double) platform_msg.brake   ;
-    final_send_packet[  5] ;
-    final_send_packet[  6] ;
+    trial_send_packet[  0] = (double) platform_msg.MorA    ;
+    trial_send_packet[  1] = (double) platform_msg.EStop   ;
+    trial_send_packet[  2] = (double) platform_msg.speed   ;
+    trial_send_packet[  3] = (double) platform_msg.steer   ;
+    trial_send_packet[  4] = (double) platform_msg.brake   ;
+    trial_send_packet[  5] = (double) cnt_tmp++;
+    trial_send_packet[  6] ;
 
     //7 ~ 9 : gps data
-    final_send_packet[  7] = gps_msg.gps_lat;
-    final_send_packet[  8] = gps_msg.gps_lon;
-    final_send_packet[  9] = gps_msg.gps_alt;
+    trial_send_packet[  7] = gps_msg.gps_lat;
+    trial_send_packet[  8] = gps_msg.gps_lon;
+    trial_send_packet[  9] = gps_msg.gps_alt;
 
     //10 ~ 19 : ins data
-    final_send_packet[ 10] = (double)ins_msg.kalman_lat;
-    final_send_packet[ 11] = (double)ins_msg.kalman_lon;
-    final_send_packet[ 12] = (double)ins_msg.kalman_alt;
-    final_send_packet[ 13] = (double)ins_msg.kalman_yaw;
-    final_send_packet[ 14] ;
-    final_send_packet[ 15] = (double)ins_msg.enu_e     ;
-    final_send_packet[ 16] = (double)ins_msg.enu_n     ;
-    final_send_packet[ 17] = (double)ins_msg.enu_u     ;
-    final_send_packet[ 18] ;
-    final_send_packet[ 19] ;
+    trial_send_packet[ 10] = (double)ins_msg.kalman_lat;
+    trial_send_packet[ 11] = (double)ins_msg.kalman_lon;
+    trial_send_packet[ 12] = (double)ins_msg.kalman_alt;
+    trial_send_packet[ 13] = (double)ins_msg.kalman_yaw;
+    trial_send_packet[ 14] ;
+    trial_send_packet[ 15] = (double)ins_msg.enu_e     ;
+    trial_send_packet[ 16] = (double)ins_msg.enu_n     ;
+    trial_send_packet[ 17] = (double)ins_msg.enu_u     ;
+    trial_send_packet[ 18] ;
+    trial_send_packet[ 19] ;
 
     //object
     int packetI = 20;
     for (objInfo_struct obj : fusn_objInfo_msg){
-        final_send_packet[packetI++] = (double)obj.idx;                                //0 : index or ctc
-        final_send_packet[packetI++] = objClass2double(obj.classes);                   //1 : classes
-        final_send_packet[packetI++] = (double)obj.x;                                  //3 : x center
-        final_send_packet[packetI++] = (double)obj.y;                                  //4 : y center
+        trial_send_packet[packetI++] = (double)obj.idx;                                //0 : index or ctc
+        trial_send_packet[packetI++] = objClass2double(obj.classes);                   //1 : classes
+        trial_send_packet[packetI++] = (double)obj.x;                                  //3 : x center
+        trial_send_packet[packetI++] = (double)obj.y;                                  //4 : y center
         if(packetI >= TRIALSENDPACKETSIZE) break;
     }
-
+    while(packetI < TRIALSENDPACKETSIZE){
+        trial_send_packet[packetI++] = 0;
+    }
+    cout << "\n\n\n\n\n\n\n\n\033[1;36msending data...\033[0m\n";
+    for(int r = 0; r < 10; r++){
+        for (int c = 0; c < 10; c++){
+            printf("%.2f  ", trial_send_packet[r + c * 10]);
+        }
+        printf("\n");
+    }
+    printf("\n");
     write(clnt_sock, trial_send_packet, TRIALSENDPACKETSIZE * sizeof(double));
 }
 
@@ -281,7 +293,7 @@ void final_send(int clnt_sock){
 
     //object
     int packetI = 20;
-    for (objInfo_struct obj : lidar_objInfo_msg){
+    for (objInfo_struct obj : fusn_objInfo_msg){
         final_send_packet[packetI++] = (double)obj.idx;                               //0 : index or ctc
         final_send_packet[packetI++] = objClass2double(obj.classes);                  //1 : classes
         final_send_packet[packetI++] = (double)sqrt(obj.x * obj.x + obj.y * obj.y);   //2 : distance
@@ -294,19 +306,34 @@ void final_send(int clnt_sock){
         final_send_packet[packetI++] = (double)obj.yMax;                              //9 : y maximun
         if(packetI >= FINALSENDPACKETSIZE) break;
     }
+    while(packetI < FINALSENDPACKETSIZE){
+        final_send_packet[packetI++] = 0;
+    }
 
-    cout << "sending data...\n";
+    cout << "\n\n\n\n\n\n\n\n\033[1;36msending data...\033[0m\n";
     for(int r = 0; r < 10; r++){
         for (int c = 0; c < 7; c++){
             printf("%.2f  ", final_send_packet[r + c * 10]);
         }
         printf("\n");
     }
+    printf("\n");
     write(clnt_sock, final_send_packet, FINALSENDPACKETSIZE * sizeof(double));
 }
 
 void recv(int clnt_sock){
+    //read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double));
     if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) ck_control.Update();
+    cout << "\033[1;36mreceving data...\033[0m\n";
+    // for(int r = 0; r < 10; r++){
+    //     for (int c = 0; c < 1; c++){
+    //         printf("%.2f  ", recv_packet[r + c * 10]);
+    //     }
+    //     printf("\n");
+    // }
+    for (int c = 0; c < 10; c++) printf("%.2f  ", recv_packet[c]);
+    printf("\n\n");
+    //cout << "recv : " << recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) << endl;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -324,7 +351,7 @@ void checkAll(){
         printf("\n");
         exit(0);
     }
-    printf("\n");
+    printf("\n==================================================================\n");
 }
 
 int main(int argc, char* argv[]){
@@ -339,7 +366,7 @@ int main(int argc, char* argv[]){
 
     ros::Subscriber sub_lidar       = nh.subscribe<TCPIP::object_msg_arr>       ("/Lidar_object",                   1, recv_lidar);
     ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>            ("/data_sender/Filtered_classes",   1, recv_camera);
-    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/fusion_obj",                     1, recv_fusion);
+    ros::Subscriber sub_fusion      = nh.subscribe<TCPIP::object_msg_arr>       ("/Fusion_msg",                     1, recv_fusion);
     ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>      ("/ublox/fix",                      1, recv_gps);
     ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray> ("/INS",                            1, recv_ins);
 
@@ -351,8 +378,8 @@ int main(int argc, char* argv[]){
     while (ros::ok()){
         ros::spinOnce();
         rate.sleep();
-        final_send(sock.second);
-        //trial_send(sock.second);
+        //final_send(sock.second);
+        trial_send(sock.second);
         recv(sock.second);
         checkAll();
     }
