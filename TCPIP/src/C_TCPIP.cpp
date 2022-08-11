@@ -1,16 +1,17 @@
 #include <TCPIP/node_declare.h>
 
-#define SERV_ADDR "192.168.1.77"
+#define SERV_ADDR "192.168.1.17"
 #define SERV_PORT 15234
 #define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
 #define TRIALSENDPACKETSIZE 100
-#define RECVPACKETSIZE      6
+#define RECVPACKETSIZE      10
 
 double final_send_packet[FINALSENDPACKETSIZE] = {0};
 double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
 double recv_packet[RECVPACKETSIZE] = {0};
 long long cnt_tmp = 0;
 
+bool recv_flag = 1;
 
 //buffer
 platform_struct platform_msg;
@@ -60,7 +61,6 @@ pair<int,int> handShake(){
         int ch;
         ch = fork();
         if (ch == 0){
-            cout << "befor hs" << endl;
             return make_pair(serv_sock, clnt_sock);
         }
         close(clnt_sock);
@@ -242,7 +242,7 @@ void trial_send(int clnt_sock){
 
     //object
     int packetI = 20;
-    for (objInfo_struct obj : fusn_objInfo_msg){
+    for (objInfo_struct obj : lidar_objInfo_msg){
         trial_send_packet[packetI++] = (double)obj.idx;                                //0 : index or ctc
         trial_send_packet[packetI++] = objClass2double(obj.classes);                   //1 : classes
         trial_send_packet[packetI++] = (double)obj.x;                                  //3 : x center
@@ -271,7 +271,7 @@ void final_send(int clnt_sock){
     final_send_packet[  2] = (double) platform_msg.speed;
     final_send_packet[  3] = (double) platform_msg.steer;
     final_send_packet[  4] = (double) platform_msg.brake;
-    final_send_packet[  5] ;
+    final_send_packet[  5] = (double) cnt_tmp++;;
     final_send_packet[  6] ;
 
     //7 ~ 9 : gps data
@@ -323,7 +323,8 @@ void final_send(int clnt_sock){
 
 void recv(int clnt_sock){
     //read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double));
-    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) ck_control.Update();
+    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) {ck_control.Update(); recv_flag = 1;}
+    else recv_flag = 0;
     cout << "\033[1;36mreceving data...\033[0m\n";
     // for(int r = 0; r < 10; r++){
     //     for (int c = 0; c < 1; c++){
@@ -374,15 +375,22 @@ int main(int argc, char* argv[]){
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
 
     ck_control.Update(); //to prevent exit(0) exactly
-    ros::Rate rate(20.);
+    ros::Rate rate(100000.);
     while (ros::ok()){
         ros::spinOnce();
-        rate.sleep();
+        //rate.sleep();
         //final_send(sock.second);
-        trial_send(sock.second);
+        if(recv_flag == 1) trial_send(sock.second);
         recv(sock.second);
         checkAll();
     }
+
+
+    // int k = 0;
+    // while (1){ //only read
+    //     cout << k++ << endl;
+    //     read(sock.second, recv_packet, RECVPACKETSIZE * sizeof(double));
+    // }
 
     // //send and receive
     // while (ros::ok()){
