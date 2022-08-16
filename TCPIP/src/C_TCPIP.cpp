@@ -1,6 +1,6 @@
 #include <TCPIP/node_declare.h>
 
-#define SERV_ADDR "192.168.1.17"
+#define SERV_ADDR "192.168.1.77"
 #define SERV_PORT 15234
 #define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
 #define TRIALSENDPACKETSIZE 100
@@ -76,13 +76,13 @@ void serial_msg_pub(){
     erp42_msgs::DriveCmd::Ptr   drive_msg(new erp42_msgs::DriveCmd);
 
     mode_msg->alive  = (uint8_t)    1;
-    mode_msg->EStop  = (uint8_t)    0;
-    mode_msg->Gear   = (uint8_t)    1;
-    mode_msg->MorA   = (uint8_t)    1;
+    mode_msg->EStop  = (uint8_t)    recv_packet[2];
+    mode_msg->Gear   = (uint8_t)    recv_packet[3];
+    mode_msg->MorA   = (uint8_t)    recv_packet[0];
 
-    drive_msg->brake = (uint8_t)    20;
-    drive_msg->Deg   = (int16_t)    0;
-    drive_msg->KPH   = (uint16_t)   0;
+    drive_msg->brake = (uint8_t)    recv_packet[1];
+    drive_msg->Deg   = (int16_t)    recv_packet[5] / 71;
+    drive_msg->KPH   = (uint16_t)   recv_packet[4] / 10;
 
     pub2serial_mode.    publish(mode_msg);
     pub2serial_drive.   publish(drive_msg);
