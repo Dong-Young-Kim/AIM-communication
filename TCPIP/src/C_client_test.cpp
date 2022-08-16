@@ -17,7 +17,7 @@
 #include <std_msgs/String.h>
 
 #define SERV_TCP_PORT 15234
-#define SERV_ADDR "192.168.1.77"
+#define SERV_ADDR "192.168.1.17"
 
 int main(int argc, char* argv[]){
    int x,y;
@@ -46,10 +46,10 @@ int main(int argc, char* argv[]){
    printf("now i am connected to the server.\n");
 
    while(1){
-      y = read(x, buf, 100 * sizeof(double));
+      y = read(x, buf, 70 * sizeof(double));
 
       for(int r = 0; r < 10; r++){
-         for (int c = 0; c < 10; c++){
+         for (int c = 0; c < 7; c++){
             printf("%.2f  ", buf[r + c * 10]);
          }
          printf("\n");

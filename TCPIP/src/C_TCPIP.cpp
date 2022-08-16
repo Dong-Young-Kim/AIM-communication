@@ -1,6 +1,6 @@
 #include <TCPIP/node_declare.h>
 
-#define SERV_ADDR "192.168.1.77"
+#define SERV_ADDR "192.168.1.17"
 #define SERV_PORT 15234
 #define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
 #define TRIALSENDPACKETSIZE 100
@@ -10,8 +10,6 @@ double final_send_packet[FINALSENDPACKETSIZE] = {0};
 double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
 double recv_packet[RECVPACKETSIZE] = {0};
 long long cnt_tmp = 0;
-
-bool recv_flag = 1;
 
 //buffer
 platform_struct platform_msg;
@@ -27,7 +25,7 @@ CK::checkProcess ck_camera          ("Camera",  1);
 CK::checkProcess ck_fusion          ("Fusion",  1);
 CK::checkProcess ck_gps             ("GPS",     1);
 CK::checkProcess ck_ins             ("INS",     1);
-CK::checkProcess ck_control         ("Control", 1);
+CK::checkProcess ck_control         ("Control", 1.5);
 
 
 pair<int,int> handShake(){
@@ -213,7 +211,7 @@ void recv_ins(const std_msgs::Float32MultiArrayConstPtr& ins_m){
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //tcpip send and recive
-void trial_send(int clnt_sock){
+void trial_send(int clnt_sock, bool rcvd){
     //0 ~ 7 : erp42's current state
     trial_send_packet[  0] = (double) platform_msg.MorA    ;
     trial_send_packet[  1] = (double) platform_msg.EStop   ;
@@ -252,7 +250,7 @@ void trial_send(int clnt_sock){
     while(packetI < TRIALSENDPACKETSIZE){
         trial_send_packet[packetI++] = 0;
     }
-    cout << "\n\n\n\n\n\n\n\n\033[1;36msending data...\033[0m\n";
+    cout << "\n\033[1;36msending data...\033[0m\n";
     for(int r = 0; r < 10; r++){
         for (int c = 0; c < 10; c++){
             printf("%.2f  ", trial_send_packet[r + c * 10]);
@@ -260,10 +258,10 @@ void trial_send(int clnt_sock){
         printf("\n");
     }
     printf("\n");
-    write(clnt_sock, trial_send_packet, TRIALSENDPACKETSIZE * sizeof(double));
+    if(rcvd) write(clnt_sock, trial_send_packet, TRIALSENDPACKETSIZE * sizeof(double));
 }
 
-void final_send(int clnt_sock){
+void final_send(int clnt_sock, bool rcvd){
 
     //0 ~ 7 : erp42's current state
     final_send_packet[  0] = (double) platform_msg.MorA ;
@@ -310,7 +308,7 @@ void final_send(int clnt_sock){
         final_send_packet[packetI++] = 0;
     }
 
-    cout << "\n\n\n\n\n\n\n\n\033[1;36msending data...\033[0m\n";
+    cout << "\n\033[1;36msending data...\033[0m\n";
     for(int r = 0; r < 10; r++){
         for (int c = 0; c < 7; c++){
             printf("%.2f  ", final_send_packet[r + c * 10]);
@@ -318,14 +316,15 @@ void final_send(int clnt_sock){
         printf("\n");
     }
     printf("\n");
-    write(clnt_sock, final_send_packet, FINALSENDPACKETSIZE * sizeof(double));
+    if(rcvd) write(clnt_sock, final_send_packet, FINALSENDPACKETSIZE * sizeof(double));
 }
 
-void recv(int clnt_sock){
+bool recv(int clnt_sock){
+    bool rcvd;
     //read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double));
-    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) {ck_control.Update(); recv_flag = 1;}
-    else recv_flag = 0;
-    cout << "\033[1;36mreceving data...\033[0m\n";
+    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) {ck_control.Update(); rcvd = 1;}
+    else rcvd = 0;
+    cout << "\n\n\n\n\n\n\n\033[1;36mreceving data...\033[0m\n";
     // for(int r = 0; r < 10; r++){
     //     for (int c = 0; c < 1; c++){
     //         printf("%.2f  ", recv_packet[r + c * 10]);
@@ -335,6 +334,7 @@ void recv(int clnt_sock){
     for (int c = 0; c < 10; c++) printf("%.2f  ", recv_packet[c]);
     printf("\n\n");
     //cout << "recv : " << recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) << endl;
+    return rcvd;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -374,34 +374,24 @@ int main(int argc, char* argv[]){
     pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
 
+    bool switchFinal;
+    nh.getParam("/TCPIP_node/switch_final", switchFinal);
+    switchFinal ? final_send(sock.second, 1) : trial_send(sock.second, 1); //first send
     ck_control.Update(); //to prevent exit(0) exactly
+
+
     ros::Rate rate(100000.);
     while (ros::ok()){
         ros::spinOnce();
-        //rate.sleep();
-        //final_send(sock.second);
-        if(recv_flag == 1) trial_send(sock.second);
-        recv(sock.second);
+        rate.sleep();
+        switchFinal ? final_send(sock.second, recv(sock.second)) : trial_send(sock.second, recv(sock.second));
         checkAll();
     }
-
 
     // int k = 0;
     // while (1){ //only read
     //     cout << k++ << endl;
     //     read(sock.second, recv_packet, RECVPACKETSIZE * sizeof(double));
     // }
-
-    // //send and receive
-    // while (ros::ok()){
-    //     ros::spinOnce();
-    //     //send_packet[199] = nh.ok();
-    //     final_send(sock.second);
-    //     //trial_send(sock.second);
-
-    //     recv(sock.second);
-    // }
-
-
     return 0;
 }
