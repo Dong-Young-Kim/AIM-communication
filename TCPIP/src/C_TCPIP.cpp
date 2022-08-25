@@ -76,7 +76,7 @@ void platformControl(){
     pubIndex.publish(routeIdx);
 
     //to prevent tcpip code killed by CK::ckeckProcess
-    if (routeIndex == 20 || routeIndex == 40 || routeIndex == 50 || routeIndex == 21 || routeIndex == 41 || routeIndex == 51) ck_control.setWaitTime(15.);
+    if (routeIndex == 20 || routeIndex == 40 || routeIndex == 50 || routeIndex == 21 || routeIndex == 41 || routeIndex == 51) ck_control.setWaitTime(9.);
     else ck_control.setWaitTime(1.5);
 
     if (routeIndex % 10 == 1) {
@@ -90,7 +90,7 @@ void platformControl(){
         do{
             curClock = std::chrono::system_clock::now();
             sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - baseClock);
-        }while(sec.count() < 8);
+        }while(sec.count() < 6);
     }
 
 
