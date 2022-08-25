@@ -46,7 +46,7 @@ int main(int argc, char* argv[]){
    printf("now i am connected to the server.\n");
 
    while(1){
-      y = read(x, buf, 70 * sizeof(double));
+      y = read(x, buf, 100 * sizeof(double));
 
       for(int r = 0; r < 10; r++){
          for (int c = 0; c < 7; c++){
@@ -55,6 +55,11 @@ int main(int argc, char* argv[]){
          printf("\n");
       }
       printf("\n\n\n\n");
+
+      if(buf[5] > 50000 && buf[5] < 50007) buf[8] = 21;
+      else if(buf[5] > 60000) buf[8] = 20;
+      else buf[8] = 0;     
+
       write(x, buf, 10 * sizeof(double));
    }
    close(x);  // disconect the communication
