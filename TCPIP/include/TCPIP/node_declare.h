@@ -133,6 +133,9 @@ public:
         printNodeAlive(alive);
         return alive;
     }
+    void setWaitTime(float wt){
+        this->waitTime = wt;
+    }
 private:
     bool nodeAlive(){
         std::chrono::system_clock::time_point curClock = std::chrono::system_clock::now();

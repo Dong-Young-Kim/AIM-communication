@@ -67,6 +67,17 @@ pair<int,int> handShake(){
     exit(0);
 }
 
+void platformControl(){
+    int routeIndex = recv_packet[8];
+
+    if (routeIndex % 10 == 1) ck_control.setWaitTime(15.);
+    else ck_control.setWaitTime(1.5);
+
+    
+
+
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //communication with serial node
 void serial_msg_pub(){
@@ -79,8 +90,8 @@ void serial_msg_pub(){
     mode_msg->MorA   = (uint8_t)    recv_packet[0];
 
     drive_msg->brake = (uint8_t)    recv_packet[1];
-    drive_msg->Deg   = (int16_t)    recv_packet[5] / 71;
-    drive_msg->KPH   = (uint16_t)   recv_packet[4] / 10;
+    drive_msg->Deg   = (int16_t)    recv_packet[5];
+    drive_msg->KPH   = (uint16_t)   recv_packet[4];
 
     pub2serial_mode.    publish(mode_msg);
     pub2serial_drive.   publish(drive_msg);
@@ -269,7 +280,7 @@ void final_send(int clnt_sock, bool rcvd){
     final_send_packet[  2] = (double) platform_msg.speed;
     final_send_packet[  3] = (double) platform_msg.steer;
     final_send_packet[  4] = (double) platform_msg.brake;
-    final_send_packet[  5] = (double) cnt_tmp++;;
+    final_send_packet[  5] = (double) cnt_tmp++;
     final_send_packet[  6] ;
 
     //7 ~ 9 : gps data
@@ -322,15 +333,13 @@ void final_send(int clnt_sock, bool rcvd){
 bool recv(int clnt_sock){
     bool rcvd;
     //read(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double));
-    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) {ck_control.Update(); rcvd = 1;}
+    if(recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) > 0) {
+        ck_control.Update();
+        platformControl();
+        rcvd = 1;
+    }
     else rcvd = 0;
     cout << "\n\n\n\n\n\n\n\033[1;36mreceving data...\033[0m\n";
-    // for(int r = 0; r < 10; r++){
-    //     for (int c = 0; c < 1; c++){
-    //         printf("%.2f  ", recv_packet[r + c * 10]);
-    //     }
-    //     printf("\n");
-    // }
     for (int c = 0; c < 10; c++) printf("%.2f  ", recv_packet[c]);
     printf("\n\n");
     //cout << "recv : " << recv(clnt_sock, recv_packet, RECVPACKETSIZE * sizeof(double), MSG_DONTWAIT) << endl;
