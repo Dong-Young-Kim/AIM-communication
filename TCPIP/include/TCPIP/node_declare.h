@@ -17,6 +17,7 @@
 #include <ros/ros.h>
 #include <boost/format.hpp>
 #include <std_msgs/String.h>
+#include <std_msgs/Int32.h>
 #include <chrono>
 
 //MSG include 
@@ -117,6 +118,7 @@ struct ins_msg_struct {
 //msg
 ros::Publisher pub2serial_mode;
 ros::Publisher pub2serial_drive;
+ros::Publisher pubIndex;
 
 namespace CK{
 class checkProcess{

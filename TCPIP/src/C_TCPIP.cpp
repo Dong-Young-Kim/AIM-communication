@@ -50,7 +50,7 @@ pair<int,int> handShake(){
     if(listen(serv_sock, 5) == -1) printf("listen error");
     clnt_adr_sz = sizeof(clnt_adr);
 
-    int T = 1000;
+    int T = 1000; //for prevent infinite loop
     while(T--){
         clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr, &clnt_adr_sz);
         if(clnt_sock == -1) printf("accept error\n");
@@ -70,10 +70,28 @@ pair<int,int> handShake(){
 void platformControl(){
     int routeIndex = recv_packet[8];
 
-    if (routeIndex % 10 == 1) ck_control.setWaitTime(15.);
+    //publish
+    std_msgs::Int32 routeIdx;
+    routeIdx.data = routeIndex;
+    pubIndex.publish(routeIdx);
+
+    //to prevent tcpip code killed by CK::ckeckProcess
+    if (routeIndex == 20 || routeIndex == 40 || routeIndex == 50 || routeIndex == 21 || routeIndex == 41 || routeIndex == 51) ck_control.setWaitTime(15.);
     else ck_control.setWaitTime(1.5);
 
-    
+    if (routeIndex % 10 == 1) {
+
+        recv_packet[1] = 200;
+        recv_packet[4] = 0;
+
+        std::chrono::system_clock::time_point baseClock = std::chrono::system_clock::now();
+        std::chrono::system_clock::time_point curClock;
+        std::chrono::seconds sec;
+        do{
+            curClock = std::chrono::system_clock::now();
+            sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - baseClock);
+        }while(sec.count() < 8);
+    }
 
 
 }
@@ -382,6 +400,7 @@ int main(int argc, char* argv[]){
 
     pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
+    pubIndex            = nh.advertise<std_msgs::Int32>     ("/indexFromCtrl",      1);
 
     bool switchFinal;
     nh.getParam("/TCPIP_node/switch_final", switchFinal);
