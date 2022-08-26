@@ -45,8 +45,8 @@ pair<int,int> handShake(){
     serv_adr.sin_addr.s_addr = inet_addr(SERV_ADDR);
     serv_adr.sin_port = htons(SERV_PORT);
 
-    if(bind(serv_sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) printf("bind error\n");
-    else printf("binding passed\n");
+    if(bind(serv_sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) printf("\033[1;31mbind error (check serv addr or other process alive)\033[0m\n");
+    else printf("\033[1;32mbinding passed\033[0m\n");
     if(listen(serv_sock, 5) == -1) printf("listen error");
     clnt_adr_sz = sizeof(clnt_adr);
 
@@ -81,8 +81,22 @@ void platformControl(){
 
     if (routeIndex % 10 == 1) {
 
+        erp42_msgs::ModeCmd::Ptr    mode_msg (new erp42_msgs::ModeCmd);
+        erp42_msgs::DriveCmd::Ptr   drive_msg(new erp42_msgs::DriveCmd);
         recv_packet[1] = 200;
         recv_packet[4] = 0;
+
+        mode_msg->alive  = (uint8_t)    1;
+        mode_msg->EStop  = (uint8_t)    recv_packet[2];
+        mode_msg->Gear   = (uint8_t)    recv_packet[3];
+        mode_msg->MorA   = (uint8_t)    recv_packet[0];
+
+        drive_msg->brake = 150;
+        drive_msg->Deg   = (int16_t)    recv_packet[5];
+        drive_msg->KPH   = 0;
+
+        pub2serial_mode.    publish(mode_msg);
+        pub2serial_drive.   publish(drive_msg);
 
         std::chrono::system_clock::time_point baseClock = std::chrono::system_clock::now();
         std::chrono::system_clock::time_point curClock;
@@ -305,6 +319,11 @@ void final_send(int clnt_sock, bool rcvd){
     final_send_packet[  7] = (double) gps_msg.gps_lat;
     final_send_packet[  8] = (double) gps_msg.gps_lon;
     final_send_packet[  9] = (double) gps_msg.gps_alt;
+
+    //7 ~ 9 : gps data
+    // final_send_packet[  7] = 37.45124824;
+    // final_send_packet[  8] = 126.6498649;
+    // final_send_packet[  9] = 36.7;
 
     //10 ~ 19 : ins data
     final_send_packet[ 10] = (double) ins_msg.kalman_lat;

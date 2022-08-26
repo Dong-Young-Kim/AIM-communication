@@ -1,7 +1,7 @@
 <launch>
 
   <node pkg="TCPIP" name="TCPIP_node" type="TCPIP" output="screen" respawn="true">
-    <param name="switch_final" value="false"/>
+    <param name="switch_final" value="true"/>
   </node>
 
 </launch>
