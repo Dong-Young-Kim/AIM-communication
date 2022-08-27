@@ -391,6 +391,20 @@ void checkAll(){
     printf("::  ");
     if(!ck_control .check()){
         printf("\n");
+
+        //prevent platform move
+        erp42_msgs::ModeCmd::Ptr    mode_msg (new erp42_msgs::ModeCmd);
+        erp42_msgs::DriveCmd::Ptr   drive_msg(new erp42_msgs::DriveCmd);
+        mode_msg->alive  = (uint8_t)    1;
+        mode_msg->EStop  = (uint8_t)    recv_packet[2];
+        mode_msg->Gear   = (uint8_t)    recv_packet[3];
+        mode_msg->MorA   = (uint8_t)    recv_packet[0];
+        drive_msg->brake = 150;
+        drive_msg->Deg   = (int16_t)    recv_packet[5];
+        drive_msg->KPH   = 0;
+        pub2serial_mode. publish(mode_msg);
+        pub2serial_drive.publish(drive_msg);
+
         exit(0);
     }
     printf("\n==================================================================\n");
