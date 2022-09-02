@@ -6,6 +6,8 @@
 #define TRIALSENDPACKETSIZE 100
 #define RECVPACKETSIZE      10
 
+#define DEFAULTWAITTIME .3
+
 double final_send_packet[FINALSENDPACKETSIZE] = {0};
 double trial_send_packet[TRIALSENDPACKETSIZE] = {0};
 double recv_packet[RECVPACKETSIZE] = {0};
@@ -19,13 +21,13 @@ tff_sign tffsign_msg;
 gps_msg_struct gps_msg;
 ins_msg_struct ins_msg;
 
-CK::checkProcess ck_erp_feedback    ("ERP_FB",  1);
-CK::checkProcess ck_lidar           ("LiDAR",   1);
-CK::checkProcess ck_camera          ("Camera",  1);
-CK::checkProcess ck_fusion          ("Fusion",  1);
-CK::checkProcess ck_gps             ("GPS",     1);
-CK::checkProcess ck_ins             ("INS",     1);
-CK::checkProcess ck_control         ("Control", 1.5);
+CK::checkProcess ck_erp_feedback    ("ERP_FB",  DEFAULTWAITTIME);
+CK::checkProcess ck_lidar           ("LiDAR",   DEFAULTWAITTIME);
+CK::checkProcess ck_camera          ("Camera",  DEFAULTWAITTIME);
+CK::checkProcess ck_fusion          ("Fusion",  DEFAULTWAITTIME);
+CK::checkProcess ck_gps             ("GPS",     DEFAULTWAITTIME);
+CK::checkProcess ck_ins             ("INS",     DEFAULTWAITTIME);
+CK::checkProcess ck_control         ("Control", DEFAULTWAITTIME * 3);
 
 
 pair<int,int> handShake(){
@@ -326,8 +328,8 @@ void final_send(int clnt_sock, bool rcvd){
 
 inline void timeCKregulate(){ //to prevent tcpip code killed by CK::ckeckProcess
     int routeIndex = recv_packet[8];
-    if (routeIndex == 20 || routeIndex == 40 || routeIndex == 50 || routeIndex == 21 || routeIndex == 41 || routeIndex == 51) ck_control.setWaitTime(9.);
-    else ck_control.setWaitTime(1.5);
+    if (routeIndex == 20 || routeIndex == 40 || routeIndex == 50 || routeIndex == 21 || routeIndex == 41 || routeIndex == 51) ck_control.setWaitTime(DEFAULTWAITTIME * 30);
+    else ck_control.setWaitTime(DEFAULTWAITTIME * 3);
 }
 
 bool recv(int clnt_sock){

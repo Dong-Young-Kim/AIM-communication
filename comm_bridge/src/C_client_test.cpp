@@ -56,7 +56,7 @@ int main(int argc, char* argv[]){
       }
       printf("\n\n\n\n");
 
-      if(buf[5] > 50000 && buf[5] < 50007) buf[8] = 21;
+      if(buf[5] > 50000 && buf[5] < 51107) buf[8] = 21;
       else if(buf[5] > 60000) buf[8] = 30;
       else buf[8] = 0;     
 

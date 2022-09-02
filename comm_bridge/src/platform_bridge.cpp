@@ -5,6 +5,7 @@
 #include <chrono>
 #include <erp42_msgs/DriveCmd.h>            //send to serial node drive data
 #include <erp42_msgs/ModeCmd.h>             //send to serial node mode data
+#include <erp42_msgs/SerialFeedBack.h>      //return erp42 current status
 #include <comm_bridge/control_msg.h>
 
 ros::Publisher pubIndex;
@@ -23,20 +24,24 @@ void platformControl(int routeIndex){
         mode_msg->EStop  = (uint8_t)    ctrlMsg.EStop;
         mode_msg->Gear   = (uint8_t)    ctrlMsg.Gear;
         mode_msg->MorA   = (uint8_t)    ctrlMsg.MorA;
-        drive_msg->brake = 150;
+        drive_msg->brake = 95;
         drive_msg->Deg   = (int16_t)    ctrlMsg.Deg;
         drive_msg->KPH   = 0;
         pub2serial_mode.    publish(mode_msg);
         pub2serial_drive.   publish(drive_msg);
 
-        std::chrono::system_clock::time_point baseClock = std::chrono::system_clock::now();
-        std::chrono::system_clock::time_point curClock;
-        std::chrono::seconds sec;
-        do{
-            curClock = std::chrono::system_clock::now();
-            sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - baseClock);
-        }while(sec.count() < 6);
+        //give wait stop time when recv signal 1
+        // std::chrono::system_clock::time_point baseClock = std::chrono::system_clock::now();
+        // std::chrono::system_clock::time_point curClock;
+        // std::chrono::seconds sec;
+        // do{
+        //     curClock = std::chrono::system_clock::now();
+        //     sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - baseClock);
+        // }while(sec.count() < 6);
     }
+
+
+
 }
 
 void recvCtrl (comm_bridge::control_msg msg){
@@ -60,6 +65,27 @@ void recvCtrl (comm_bridge::control_msg msg){
     pub2serial_drive.   publish(drive_msg);
 }
 
+//<value, time>
+std::pair<uint16_t, std::chrono::system_clock::time_point> prevEnco;
+std::pair<uint16_t, std::chrono::system_clock::time_point> crntEnco;
+double Ru = 460, Rl = 450;
+double Re = Ru-(Ru-Rl)/3;
+
+void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
+
+
+    crntEnco.first = msg->encoder;
+    if(prevEnco != crntEnco){
+        crntEnco.first - prevEnco.first;
+        std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(crntEnco.second - prevEnco.second);
+
+
+        prevEnco = crntEnco;
+    }
+
+}
+
+//always publish signal(when control dead)
 void pubSignal(){
     pubIndex.publish(indexSignal);
 }
@@ -69,6 +95,7 @@ int main(int argc, char* argv[]){
     ros::init(argc, argv, "platform_control");  //node name 
 	ros::NodeHandle nh;                         //nodehandle
 
+    ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
     ros::Subscriber subCtrl = nh.subscribe<comm_bridge::control_msg> ("/comm_bridge/fromCtrl", 1, recvCtrl);
 
 
