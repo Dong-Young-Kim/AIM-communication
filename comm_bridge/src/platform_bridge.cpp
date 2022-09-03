@@ -72,9 +72,20 @@ double Re = Ru - (Ru-Rl)/3;
 double rdus = M_PI * Re;
 double velMPS, velKPH;
 char stopCounter;
+std::vector<double> velArr;
+
+double aveFilter(double val){
+    if(velArr.size() > 10){
+
+    }
+    else {
+
+    }
+    return 0;
+}
 
 void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
-    crntEnco = std::make_pair(msg->encoder, std::chrono::system_clock::now());
+    crntEnco = std::make_pair(-msg->encoder, std::chrono::system_clock::now());
     if(prevEnco.first != crntEnco.first){
         double deltaDist = rdus * (double)(crntEnco.first - prevEnco.first) / 100;
         std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(crntEnco.second - prevEnco.second);
@@ -84,7 +95,7 @@ void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
         stopCounter = 0;
     }
     else {
-        if(stopCounter > 10) velKPH = .0;
+        if(stopCounter > 5) velKPH = .0;
         stopCounter++;
     }
     std_msgs::Float32 velo;
