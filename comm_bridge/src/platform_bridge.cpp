@@ -67,24 +67,29 @@ void recvCtrl (comm_bridge::control_msg msg){
 //<value, time>
 std::pair<uint16_t, std::chrono::system_clock::time_point> prevEnco = std::make_pair(0,std::chrono::system_clock::now());
 std::pair<uint16_t, std::chrono::system_clock::time_point> crntEnco = std::make_pair(0,std::chrono::system_clock::now());
-double Ru = 460, Rl = 450;
+double Ru = 540, Rl = 530;
 double Re = Ru - (Ru-Rl)/3;
-double rdus = 2 * M_PI * Re;
+double rdus = M_PI * Re;
 double velMPS, velKPH;
+char stopCounter;
 
 void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
     crntEnco = std::make_pair(msg->encoder, std::chrono::system_clock::now());
-    if(prevEnco != crntEnco){
+    if(prevEnco.first != crntEnco.first){
         double deltaDist = rdus * (double)(crntEnco.first - prevEnco.first) / 100;
         std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(crntEnco.second - prevEnco.second);
-        velMPS = deltaDist / ms.count();
+        velMPS = deltaDist / ms.count() * 1000;
         velKPH = 3.6 * velMPS;
         prevEnco = crntEnco;
+        stopCounter = 0;
+    }
+    else {
+        if(stopCounter > 10) velKPH = .0;
+        stopCounter++;
     }
     std_msgs::Float32 velo;
     velo.data = velKPH;
     pubEncoderVelocity.publish(velo);
-
 }
 
 //always publish signal(when control dead)
