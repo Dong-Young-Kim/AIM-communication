@@ -3,6 +3,7 @@
   <node pkg="comm_bridge" name="tcpip_node" type="tcpip_node" output="screen" respawn="true">
     <param name="switch_final" value="true"/>
   </node>
+  <node pkg="SIG_management" name="SIGNAL_manage" type="SIGNAL_manage" respawn="true"/>
 
   <node pkg="comm_bridge" name="platform_bridge" type="platform_bridge"/> 
 
