@@ -2,6 +2,7 @@
 #include <boost/format.hpp>
 #include <std_msgs/String.h>
 #include <std_msgs/Int32.h>
+#include <std_msgs/Float32.h>
 #include <chrono>
 #include <erp42_msgs/DriveCmd.h>            //send to serial node drive data
 #include <erp42_msgs/ModeCmd.h>             //send to serial node mode data
@@ -11,6 +12,7 @@
 ros::Publisher pubIndex;
 ros::Publisher pub2serial_mode;
 ros::Publisher pub2serial_drive;
+ros::Publisher pubEncoderVelocity;
 
 std_msgs::Int32 indexSignal;
 comm_bridge::control_msg ctrlMsg;
@@ -31,17 +33,14 @@ void platformControl(int routeIndex){
         pub2serial_drive.   publish(drive_msg);
 
         //give wait stop time when recv signal 1
-        // std::chrono::system_clock::time_point baseClock = std::chrono::system_clock::now();
-        // std::chrono::system_clock::time_point curClock;
-        // std::chrono::seconds sec;
-        // do{
-        //     curClock = std::chrono::system_clock::now();
-        //     sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - baseClock);
-        // }while(sec.count() < 6);
+        std::chrono::system_clock::time_point baseClock = std::chrono::system_clock::now();
+        std::chrono::system_clock::time_point curClock;
+        std::chrono::seconds sec;
+        do{
+            curClock = std::chrono::system_clock::now();
+            sec = std::chrono::duration_cast<std::chrono::seconds>(curClock - baseClock);
+        }while(sec.count() < 1);
     }
-
-
-
 }
 
 void recvCtrl (comm_bridge::control_msg msg){
@@ -66,22 +65,25 @@ void recvCtrl (comm_bridge::control_msg msg){
 }
 
 //<value, time>
-std::pair<uint16_t, std::chrono::system_clock::time_point> prevEnco;
+std::pair<uint16_t, std::chrono::system_clock::time_point> prevEnco = std::make_pair(0,std::chrono::system_clock::now());
 std::pair<uint16_t, std::chrono::system_clock::time_point> crntEnco;
 double Ru = 460, Rl = 450;
-double Re = Ru-(Ru-Rl)/3;
+double Re = Ru - (Ru-Rl)/3;
+double rdus = 2 * M_PI * Re;
+double velMPS, velKPH;
 
 void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
-
-
-    crntEnco.first = msg->encoder;
+    crntEnco = std::make_pair(msg->encoder, std::chrono::system_clock::now());
     if(prevEnco != crntEnco){
-        crntEnco.first - prevEnco.first;
+        double deltaDist = rdus * (double)(crntEnco.first - prevEnco.first) / 100;
         std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(crntEnco.second - prevEnco.second);
-
-
+        velMPS = deltaDist / sec.count();
+        velKPH = 3.6 * velMPS;
         prevEnco = crntEnco;
     }
+    std_msgs::Float32 velo;
+    velo.data = velKPH;
+    pubEncoderVelocity.publish(velo);
 
 }
 
@@ -102,6 +104,7 @@ int main(int argc, char* argv[]){
     pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
     pubIndex            = nh.advertise<std_msgs::Int32>     ("/indexFromCtrl",      1);
+    pubEncoderVelocity  = nh.advertise<std_msgs::Float32>   ("/encoderVelocity",    1);
 
     ros::Rate rate(20.);
     while(ros::ok()){
