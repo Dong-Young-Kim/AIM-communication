@@ -66,7 +66,7 @@ void recvCtrl (comm_bridge::control_msg msg){
 
 //<value, time>
 std::pair<uint16_t, std::chrono::system_clock::time_point> prevEnco = std::make_pair(0,std::chrono::system_clock::now());
-std::pair<uint16_t, std::chrono::system_clock::time_point> crntEnco;
+std::pair<uint16_t, std::chrono::system_clock::time_point> crntEnco = std::make_pair(0,std::chrono::system_clock::now());
 double Ru = 460, Rl = 450;
 double Re = Ru - (Ru-Rl)/3;
 double rdus = 2 * M_PI * Re;
@@ -76,8 +76,8 @@ void recv_feedback (const erp42_msgs::SerialFeedBack::Ptr msg){
     crntEnco = std::make_pair(msg->encoder, std::chrono::system_clock::now());
     if(prevEnco != crntEnco){
         double deltaDist = rdus * (double)(crntEnco.first - prevEnco.first) / 100;
-        std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(crntEnco.second - prevEnco.second);
-        velMPS = deltaDist / sec.count();
+        std::chrono::microseconds ms = std::chrono::duration_cast<std::chrono::microseconds>(crntEnco.second - prevEnco.second);
+        velMPS = deltaDist / ms.count();
         velKPH = 3.6 * velMPS;
         prevEnco = crntEnco;
     }

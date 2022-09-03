@@ -15,19 +15,19 @@ long long cnt_tmp = 0;
 
 //buffer
 platform_struct platform_msg;
-vector<objInfo_struct> fusn_objInfo_msg;
-vector<objInfo_struct> lidar_objInfo_msg;
+vector<objInfo_struct> objInfo_msg;
 tff_sign tffsign_msg;
 gps_msg_struct gps_msg;
 ins_msg_struct ins_msg;
+std::string missionName;
 
-CK::checkProcess ck_erp_feedback    ("ERP_FB",  DEFAULTWAITTIME);
-CK::checkProcess ck_lidar           ("LiDAR",   DEFAULTWAITTIME);
-CK::checkProcess ck_camera          ("Camera",  DEFAULTWAITTIME);
-CK::checkProcess ck_fusion          ("Fusion",  DEFAULTWAITTIME);
-CK::checkProcess ck_gps             ("GPS",     DEFAULTWAITTIME);
-CK::checkProcess ck_ins             ("INS",     DEFAULTWAITTIME);
-CK::checkProcess ck_control         ("Control", DEFAULTWAITTIME * 3);
+CK::checkProcess ck_erp_feedback    ("ERP_FB",   DEFAULTWAITTIME);
+CK::checkProcess ck_lidar           ("LiDAR",    DEFAULTWAITTIME);
+CK::checkProcess ck_tffsign         ("TFF SIGN", DEFAULTWAITTIME);
+CK::checkProcess ck_fusion          ("Fusion",   DEFAULTWAITTIME);
+CK::checkProcess ck_gps             ("GPS",      DEFAULTWAITTIME);
+CK::checkProcess ck_ins             ("INS",      DEFAULTWAITTIME);
+CK::checkProcess ck_control         ("Control",  DEFAULTWAITTIME * 3);
 
 
 pair<int,int> handShake(){
@@ -125,29 +125,29 @@ void recv_cmd (const erp42_msgs::CmdControl::Ptr msg){
 //recive data and save
 void recv_lidar(const comm_bridge::object_msg_arrConstPtr& lidar_arr){
     ck_lidar.Update();
-    lidar_objInfo_msg.clear();
-    for (const comm_bridge::object_msg& fusn_obj : lidar_arr->object_msg_arr){
+    objInfo_msg.clear();
+    for (const comm_bridge::object_msg& lidar_obj : lidar_arr->object_msg_arr){
         objInfo_struct objInfoTmp;
-        objInfoTmp.classes = fusn_obj.classes;
-        objInfoTmp.idx     = fusn_obj.idx + 1;          //prevent 0 when send tcpip
-        objInfoTmp.x       = fusn_obj.x;
-        objInfoTmp.y       = fusn_obj.y;
-        objInfoTmp.z       = fusn_obj.z;
-        objInfoTmp.xMin    = fusn_obj.xMin;
-        objInfoTmp.yMin    = fusn_obj.yMin;
-        objInfoTmp.zMin    = fusn_obj.zMin;
-        objInfoTmp.xMax    = fusn_obj.xMax;
-        objInfoTmp.yMax    = fusn_obj.yMax;
-        objInfoTmp.zMax    = fusn_obj.zMax;
+        objInfoTmp.classes = lidar_obj.classes;
+        objInfoTmp.idx     = lidar_obj.idx + 1;          //prevent 0 when send tcpip
+        objInfoTmp.x       = lidar_obj.x;
+        objInfoTmp.y       = lidar_obj.y;
+        objInfoTmp.z       = lidar_obj.z;
+        objInfoTmp.xMin    = lidar_obj.xMin;
+        objInfoTmp.yMin    = lidar_obj.yMin;
+        objInfoTmp.zMin    = lidar_obj.zMin;
+        objInfoTmp.xMax    = lidar_obj.xMax;
+        objInfoTmp.yMax    = lidar_obj.yMax;
+        objInfoTmp.zMax    = lidar_obj.zMax;
         
-        lidar_objInfo_msg.push_back(objInfoTmp);
+        objInfo_msg.push_back(objInfoTmp);
     }
-    sort(lidar_objInfo_msg.begin(), lidar_objInfo_msg.end(), obj_comp);
+    sort(objInfo_msg.begin(), objInfo_msg.end(), obj_comp);
 }
 
 void recv_fusion(const comm_bridge::object_msg_arrConstPtr& fusn_arr){
     ck_fusion.Update();
-    fusn_objInfo_msg.clear();
+    objInfo_msg.clear();
     for (const comm_bridge::object_msg& fusn_obj : fusn_arr->object_msg_arr){
         objInfo_struct objInfoTmp;
         objInfoTmp.classes = fusn_obj.classes;
@@ -162,15 +162,21 @@ void recv_fusion(const comm_bridge::object_msg_arrConstPtr& fusn_arr){
         objInfoTmp.yMax    = fusn_obj.yMax;
         objInfoTmp.zMax    = fusn_obj.zMax;
 
-        fusn_objInfo_msg.push_back(objInfoTmp);
+        objInfo_msg.push_back(objInfoTmp);
     }
-    sort(fusn_objInfo_msg.begin(), fusn_objInfo_msg.end(), obj_comp);
+    sort(objInfo_msg.begin(), objInfo_msg.end(), obj_comp);
 }
 
-void recv_camera(const std_msgs::String){
-    ck_camera.Update();
+void recv_tffsign(const std_msgs::String){
+    ck_tffsign.Update();
     //need tffSign filter sorted fixel area
     //so tffSign have to be handed fusion code
+
+
+}
+
+void recv_missionName(const std_msgs::String mission){
+    missionName = mission.data;
 }
 
 void recv_gps(const sensor_msgs::NavSatFixConstPtr& gps_m){
@@ -242,7 +248,7 @@ void trial_send(int clnt_sock, bool rcvd){
 
     //object
     int packetI = 20;
-    for (objInfo_struct obj : lidar_objInfo_msg){
+    for (objInfo_struct obj : objInfo_msg){
         trial_send_packet[packetI++] = (double)obj.idx;                                //0 : index or ctc
         trial_send_packet[packetI++] = objClass2double(obj.classes);                   //1 : classes
         trial_send_packet[packetI++] = (double)obj.x;                                  //3 : x center
@@ -298,7 +304,7 @@ void final_send(int clnt_sock, bool rcvd){
 
     //object
     int packetI = 20;
-    for (objInfo_struct obj : fusn_objInfo_msg){
+    for (objInfo_struct obj : objInfo_msg){
         final_send_packet[packetI++] = (double)obj.idx;                               //0 : index or ctc
         final_send_packet[packetI++] = objClass2double(obj.classes);                  //1 : classes
         final_send_packet[packetI++] = (double)sqrt(obj.x * obj.x + obj.y * obj.y);   //2 : distance
@@ -355,8 +361,8 @@ void checkAll(){
     printf("==================================================================\n");
     ck_erp_feedback.check();
     ck_lidar       .check();
-    ck_camera      .check();
     ck_fusion      .check();
+    ck_tffsign     .check();
     ck_gps         .check();
     ck_ins         .check();
     printf("::  ");
@@ -370,6 +376,7 @@ void checkAll(){
 
         exit(0);
     }
+    printf(" %s", missionName);
     printf("\n==================================================================\n");
 }
 
@@ -383,11 +390,12 @@ int main(int argc, char* argv[]){
     ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback",     1, recv_feedback);
     ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command",      1, recv_cmd);
 
-    ros::Subscriber sub_lidar       = nh.subscribe<comm_bridge::object_msg_arr>      ("/Lidar_object",                   1,     recv_lidar);
-    ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>                 ("/data_sender/Filtered_classes",   1,     recv_camera);
-    ros::Subscriber sub_fusion      = nh.subscribe<comm_bridge::object_msg_arr>      ("/Fusion_msg",                     1,     recv_fusion);
+    ros::Subscriber sub_lidar       = nh.subscribe<comm_bridge::object_msg_arr>      ("/SIG_Lidar_object",               1,     recv_lidar);
+    ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>                 ("/SIG_Fusion_TFFsign_object",      1,     recv_tffsign);
+    ros::Subscriber sub_fusion      = nh.subscribe<comm_bridge::object_msg_arr>      ("/SIG_Fusion_object",              1,     recv_fusion);
     ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>           ("/fix_RTK",                        1,     recv_gps);
     ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray>      ("/INS",                            1,     recv_ins);
+    ros::Subscriber sub_mission     = nh.subscribe<std_msgs::String>                 ("/SIG_Mission_name",               1,     recv_missionName);
 
     //pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     //pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
