@@ -169,7 +169,7 @@ void recv_fusion(const comm_bridge::object_msg_arrConstPtr& fusn_arr){
 
 void recv_tffsign(const std_msgs::String tff_data){
     ck_tffsign.Update();
-    tff_sign = tff_data;
+    tff_sign = tff_data.data;
 }
 
 void recv_missionName(const std_msgs::String mission){
