@@ -16,7 +16,7 @@ long long cnt_tmp = 0;
 //buffer
 platform_struct platform_msg;
 vector<objInfo_struct> objInfo_msg;
-tff_sign tffsign_msg;
+std::string tff_sign;
 gps_msg_struct gps_msg;
 ins_msg_struct ins_msg;
 std::string missionName;
@@ -167,12 +167,9 @@ void recv_fusion(const comm_bridge::object_msg_arrConstPtr& fusn_arr){
     sort(objInfo_msg.begin(), objInfo_msg.end(), obj_comp);
 }
 
-void recv_tffsign(const std_msgs::String){
+void recv_tffsign(const std_msgs::String tff_data){
     ck_tffsign.Update();
-    //need tffSign filter sorted fixel area
-    //so tffSign have to be handed fusion code
-
-
+    tff_sign = tff_data;
 }
 
 void recv_missionName(const std_msgs::String mission){
@@ -234,7 +231,7 @@ void trial_send(int clnt_sock, bool rcvd){
     trial_send_packet[  8] = gps_msg.gps_lon;
     trial_send_packet[  9] = gps_msg.gps_alt;
 
-    //10 ~ 19 : ins data
+    //10 ~ 17 : ins data
     trial_send_packet[ 10] = (double)ins_msg.kalman_lat;
     trial_send_packet[ 11] = (double)ins_msg.kalman_lon;
     trial_send_packet[ 12] = (double)ins_msg.kalman_alt;
@@ -243,6 +240,7 @@ void trial_send(int clnt_sock, bool rcvd){
     trial_send_packet[ 15] = (double)ins_msg.enu_e     ;
     trial_send_packet[ 16] = (double)ins_msg.enu_n     ;
     trial_send_packet[ 17] = (double)ins_msg.enu_u     ;
+    
     trial_send_packet[ 18] ;
     trial_send_packet[ 19] ;
 
@@ -290,7 +288,7 @@ void final_send(int clnt_sock, bool rcvd){
     // final_send_packet[  8] = 126.6498649;
     // final_send_packet[  9] = 36.7;
 
-    //10 ~ 19 : ins data
+    //10 ~ 17 : ins data
     final_send_packet[ 10] = (double) ins_msg.kalman_lat;
     final_send_packet[ 11] = (double) ins_msg.kalman_lon;
     final_send_packet[ 12] = (double) ins_msg.kalman_alt;
@@ -299,8 +297,9 @@ void final_send(int clnt_sock, bool rcvd){
     final_send_packet[ 15] = (double) ins_msg.enu_e;
     final_send_packet[ 16] = (double) ins_msg.enu_n;
     final_send_packet[ 17] = (double) ins_msg.enu_u;
+
     final_send_packet[ 18] ;
-    final_send_packet[ 19] = (double) tffsign_msg.signal_num;
+    final_send_packet[ 19] = (double) objClass2double(tff_sign);
 
     //object
     int packetI = 20;

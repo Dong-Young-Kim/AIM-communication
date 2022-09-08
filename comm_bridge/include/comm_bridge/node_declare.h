@@ -60,16 +60,6 @@ struct objInfo_struct {
     float zMax          = 0;
 };
 
-//traffic sign
-struct tff_sign{
-    double signal_num      = 0;
-    //bool R              = 0;  //1
-    //bool O              = 0;  //2
-    //bool G              = 0;  //3
-    //bool LR             = 0;  //4
-    //bool LG             = 0;  //5
-};
-
 inline double objClass2double(string clas){
     if (clas == "unknown")          return 10;
     else if (clas == "car")         return 11;
