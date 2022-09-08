@@ -63,18 +63,21 @@ struct objInfo_struct {
 inline double objClass2double(string clas){
     if (clas == "unknown")          return 10;
     else if (clas == "car")         return 11;
-    else if (clas == "person")      return 12; 
+    else if (clas == "person")      return 12;
+
     else if (clas == "A1")          return 101;
     else if (clas == "A2")          return 102;
     else if (clas == "A3")          return 103;
     else if (clas == "B1")          return 111;
     else if (clas == "B2")          return 112;
     else if (clas == "B3")          return 113;
+
     else if (clas == "R")           return 50;
     else if (clas == "Y")           return 51;
     else if (clas == "G")           return 52;
     else if (clas == "LR")          return 53;
     else if (clas == "LG")          return 54;
+    
     else return -1;
 }
 
