@@ -19,14 +19,14 @@ comm_bridge::control_msg ctrlMsg;
 
 void platformControl(int routeIndex){
 
-    if (routeIndex % 10 == 1) {
+    if (routeIndex % 2 == 1) {
         erp42_msgs::ModeCmd::Ptr    mode_msg (new erp42_msgs::ModeCmd);
         erp42_msgs::DriveCmd::Ptr   drive_msg(new erp42_msgs::DriveCmd);
         mode_msg->alive  = (uint8_t)    1;
         mode_msg->EStop  = (uint8_t)    ctrlMsg.EStop;
         mode_msg->Gear   = (uint8_t)    ctrlMsg.Gear;
         mode_msg->MorA   = (uint8_t)    ctrlMsg.MorA;
-        drive_msg->brake = 95;
+        drive_msg->brake = 199;
         drive_msg->Deg   = (int16_t)    ctrlMsg.Deg;
         drive_msg->KPH   = 0;
         pub2serial_mode.    publish(mode_msg);
