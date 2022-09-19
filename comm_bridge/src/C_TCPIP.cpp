@@ -386,10 +386,13 @@ int main(int argc, char* argv[]){
     ros::init(argc, argv, "TCPIP");             //node name 
 	ros::NodeHandle nh;                         //nodehandle
 
+    string lidar_loc;
+    nh.getParam("/tcpip_node/lidar_msg_location", lidar_loc);
+
     ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback",     1, recv_feedback);
     ros::Subscriber sub_cmdcontrol  = nh.subscribe<erp42_msgs::CmdControl::Ptr>      ("/erp42_serial/command",      1, recv_cmd);
 
-    ros::Subscriber sub_lidar       = nh.subscribe<comm_bridge::object_msg_arr>      ("/SIG_Lidar_object",               1,     recv_lidar);
+    ros::Subscriber sub_lidar       = nh.subscribe<comm_bridge::object_msg_arr>      ( lidar_loc,                        1,     recv_lidar);
     ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>                 ("/SIG_Fusion_TFFsign_object",      1,     recv_tffsign);
     ros::Subscriber sub_fusion      = nh.subscribe<comm_bridge::object_msg_arr>      ("/SIG_Fusion_object",              1,     recv_fusion);
     ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>           ("/fix_RTK",                        1,     recv_gps);
