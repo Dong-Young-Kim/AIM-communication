@@ -395,7 +395,7 @@ int main(int argc, char* argv[]){
     ros::Subscriber sub_lidar       = nh.subscribe<comm_bridge::object_msg_arr>      ( lidar_loc,                        1,     recv_lidar);
     ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>                 ("/SIG_Fusion_TFFsign_object",      1,     recv_tffsign);
     ros::Subscriber sub_fusion      = nh.subscribe<comm_bridge::object_msg_arr>      ("/SIG_Fusion_object",              1,     recv_fusion);
-    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>           ("/fix_RTK",                        1,     recv_gps);
+    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>           ("/ublox/fix",                        1,     recv_gps);
     ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray>      ("/INS",                            1,     recv_ins);
     ros::Subscriber sub_mission     = nh.subscribe<std_msgs::String>                 ("/SIG_Mission_name",               1,     recv_missionName);
 
