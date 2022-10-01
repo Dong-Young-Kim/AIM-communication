@@ -114,7 +114,7 @@ int main(int argc, char* argv[]){
 	ros::NodeHandle nh;                         //nodehandle
 
     ros::Subscriber sub_feedback    = nh.subscribe<erp42_msgs::SerialFeedBack::Ptr>  ("/erp42_serial/feedback", 1, recv_feedback);
-    //ros::Subscriber subCtrl = nh.subscribe<comm_bridge::control_msg> ("/comm_bridge/fromCtrl", 1, recvCtrl);
+    ros::Subscriber subCtrl = nh.subscribe<comm_bridge::control_msg> ("/comm_bridge/fromCtrl", 1, recvCtrl);
 
 
     pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
