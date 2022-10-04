@@ -1,6 +1,6 @@
 #include <comm_bridge/node_declare.h>
 
-#define SERV_ADDR "192.168.1.77"
+#define SERV_ADDR "192.168.1.17"
 #define SERV_PORT 15234
 #define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
 #define TRIALSENDPACKETSIZE 100
