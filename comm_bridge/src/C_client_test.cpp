@@ -17,7 +17,7 @@
 #include <std_msgs/String.h>
 
 #define SERV_TCP_PORT 15234
-#define SERV_ADDR "192.168.1.17"
+#define SERV_ADDR "127.0.0.1"
 
 int main(int argc, char* argv[]){
    int x,y;

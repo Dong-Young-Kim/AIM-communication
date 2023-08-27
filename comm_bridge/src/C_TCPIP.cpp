@@ -1,6 +1,6 @@
 #include <comm_bridge/node_declare.h>
 
-#define SERV_ADDR "192.168.1.17"
+#define SERV_ADDR "192.168.1.77"
 #define SERV_PORT 15234
 #define FINALSENDPACKETSIZE 70 //!!always set to multiples of 10!!  :  maximum sending object size ("SENDPACKETSIZE" - 50) / 10
 #define TRIALSENDPACKETSIZE 100
@@ -44,7 +44,7 @@ pair<int,int> handShake(){
 
     memset(&serv_adr, 0, sizeof(serv_adr));
     serv_adr.sin_family = AF_INET;
-    serv_adr.sin_addr.s_addr = inet_addr(SERV_ADDR);
+    serv_adr.sin_addr.s_addr = INADDR_ANY; /* inet_addr(SERV_ADDR) */
     serv_adr.sin_port = htons(SERV_PORT);
 
     if(bind(serv_sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) printf("\033[1;31mbind error (check serv addr or other process alive)\033[0m\n");
@@ -395,14 +395,14 @@ int main(int argc, char* argv[]){
     ros::Subscriber sub_lidar       = nh.subscribe<comm_bridge::object_msg_arr>      ( lidar_loc,                        1,     recv_lidar);
     ros::Subscriber sub_camera      = nh.subscribe<std_msgs::String>                 ("/SIG_Fusion_TFFsign_object",      1,     recv_tffsign);
     ros::Subscriber sub_fusion      = nh.subscribe<comm_bridge::object_msg_arr>      ("/SIG_Fusion_object",              1,     recv_fusion);
-    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>           ("/ublox/fix",                        1,     recv_gps);
+    ros::Subscriber sub_gps         = nh.subscribe<sensor_msgs::NavSatFix>           ("/ublox/fix",                      1,     recv_gps);
     ros::Subscriber sub_ins         = nh.subscribe<std_msgs::Float32MultiArray>      ("/INS",                            1,     recv_ins);
     ros::Subscriber sub_mission     = nh.subscribe<std_msgs::String>                 ("/SIG_Mission_name",               1,     recv_missionName);
 
     //pub2serial_mode     = nh.advertise<erp42_msgs::ModeCmd> ("/erp42_serial/mode",  1);
     //pub2serial_drive    = nh.advertise<erp42_msgs::DriveCmd>("/erp42_serial/drive", 1);
     //pubIndex            = nh.advertise<std_msgs::Int32>     ("/indexFromCtrl",      1);
-    pubCtrl             = nh.advertise<comm_bridge::control_msg>     ("//comm_bridge/fromCtrl",      1);
+    pubCtrl             = nh.advertise<comm_bridge::control_msg>     ("/comm_bridge/fromCtrl",      1);
 
     bool switchFinal;
     nh.getParam("/tcpip_node/switch_final", switchFinal);
