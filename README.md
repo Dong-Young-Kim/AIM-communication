@@ -15,13 +15,47 @@ for communicate with other host
    - GPS/INS Localization Processed Data
 
 1. Check Sensor Data Process is Alive
+    - GREEN Background: Process is  alive (Data Receiving)
+    - RED Background : Process isn't alive (Data doesn't Receiving)
 
-1. Cummunucate with Other Host(Panning Process)
+1. Cummunucate with Other Host
+    1. Panning Process
+        - The actual data being transmitt and received can be checked.
+    1. Vehicle (ERP-42 PCU)
 
 #### Demo Image
 ![Demo](https://user-images.githubusercontent.com/72393686/263530400-f27a1049-969c-439a-938a-57fddde4c97d.png)
 
 > Real-time data transmitted and received through TCP communication is displayed on the screen. Check whether the each node's processing data from sensor is working, green indicates normal reception and red indicates no reception.
+
+<br>
+
+## File Structure
+
+```
+.
+├── TCPIP           <LEGACY>
+│   └── ... 
+└── comm_bridge     <ACTUAL ROS PACKAGE>
+    ├── CMakeLists.txt
+    ├── include
+    │   └── comm_bridge
+    │       └── node_declare.h
+    ├── launch
+    │   ├── comm_bridge_prev.launch
+    │   ├── comm_bridge_road.launch
+    │   └── comm_bridge_track.launch
+    ├── msg
+    │   ├── control_msg.msg
+    │   ├── object_msg.msg
+    │   └── object_msg_arr.msg
+    ├── package.xml
+    └── src
+        ├── C_TCPIP.cpp             <main node>
+        ├── C_client_test.cpp       <test file>
+        └── platform_bridge.cpp     <bridge for vehicle>
+
+```
 
 <br>
 

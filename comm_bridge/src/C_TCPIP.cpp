@@ -283,11 +283,6 @@ void final_send(int clnt_sock, bool rcvd){
     final_send_packet[  8] = (double) gps_msg.gps_lon;
     final_send_packet[  9] = (double) gps_msg.gps_alt;
 
-    //7 ~ 9 : gps data
-    // final_send_packet[  7] = 37.45124824;
-    // final_send_packet[  8] = 126.6498649;
-    // final_send_packet[  9] = 36.7;
-
     //10 ~ 17 : ins data
     final_send_packet[ 10] = (double) ins_msg.kalman_lat;
     final_send_packet[ 11] = (double) ins_msg.kalman_lon;
