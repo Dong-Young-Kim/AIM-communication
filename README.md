@@ -94,3 +94,7 @@ cd ~/catkin_ws
 catkin_make
 roslaunch comm_bridge comm_bridge_road.launch
 ```
+
+---
+
+Copyright 2023  &copy;dnyg All Rights Reserved.
